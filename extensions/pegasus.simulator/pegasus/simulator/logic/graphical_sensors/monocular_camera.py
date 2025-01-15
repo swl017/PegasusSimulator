@@ -76,7 +76,7 @@ class MonocularCamera(GraphicalSensor):
         super().initialize(vehicle)
 
         # Get the complete stage prefix for the camera
-        self._stage_prim_path = get_stage_next_free_path(PegasusInterface().world.stage, self._vehicle.prim_path + "/body/" + self._camera_name, False)
+        self._stage_prim_path = get_stage_next_free_path(PegasusInterface().world.stage, self._vehicle.prim_path + self._camera_name, False)
 
         # Get the camera name that was actually created (and update the camera name)
         self._camera_name = self._stage_prim_path.rpartition("/")[-1]
