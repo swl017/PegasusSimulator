@@ -53,10 +53,24 @@ NVIDIA_SIMULATION_ENVIRONMENTS = {
 }
 
 OMNIVERSE_ENVIRONMENTS = {
-    "Exhibition Hall": "omniverse://localhost/NVIDIA/Assets/Scenes/Templates/Interior/ZetCG_ExhibitionHall.usd"
+    "Exhibition Hall": "omniverse://localhost/NVIDIA/Assets/Scenes/Templates/Interior/ZetCG_ExhibitionHall.usd",
+    # "Flight": "omniverse://localhost/NVIDIA/Samples/Flight/Flight.usd",
 }
 
-SIMULATION_ENVIRONMENTS = {}
+SIMULATION_ENVIRONMENTS={}
+
+CUSTOM_WORLD_PATH = "/home/usrg/IsaacPX4/world"
+CUSTOM_SIMULATION_ENVIRONMENTS = {
+    "Plane with Light": "custom/plane_with_light.usda",
+    "Flight": "Flight/Flight.usda",
+    "Flight Flat": "Flight/Flight_flat.usda",
+    "Flight with Collision": "Flight/Flight_no_camera.usda",
+    }
+# Add the Isaac Sim assets to the list
+for asset in CUSTOM_SIMULATION_ENVIRONMENTS:
+    SIMULATION_ENVIRONMENTS[asset] = (
+        CUSTOM_WORLD_PATH +"/"+ CUSTOM_SIMULATION_ENVIRONMENTS[asset]
+    )
 
 # Add the Isaac Sim assets to the list
 for asset in NVIDIA_SIMULATION_ENVIRONMENTS:
@@ -79,7 +93,7 @@ WORLD_SETTINGS = {
     'px4': {
         "physics_dt": 1.0 / 250.0,
         "stage_units_in_meters": 1.0,
-        "rendering_dt": 1.0 / 60.0,
+        "rendering_dt": 1.0 / 30.0,
         "device": "cpu"
     },
     'ardupilot': {

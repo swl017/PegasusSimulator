@@ -97,6 +97,7 @@ class MonocularCamera(GraphicalSensor):
 
         # Start the camera
         self._camera.initialize()
+        # self._camera.set_focal_length(fx / 10.0)
 
         # Set the correct properties of the camera (this must be done after the camera object is initialized)
         #self._camera.set_projection_type("pinhole")

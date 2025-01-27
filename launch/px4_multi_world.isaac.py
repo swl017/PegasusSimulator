@@ -38,7 +38,7 @@ import asyncio
 import carb
 import omni.ext
 import omni.graph.core as og
-
+import omni.isaac.ros2_bridge as bridge
 
 class PegasusApp:
     """
@@ -62,12 +62,25 @@ class PegasusApp:
         self.world = self.pg.world
 
         # Launch one of the worlds provided by NVIDIA
-        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
-
-        self.namespace = "px4_"
+        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Plane with Light"])
+        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight"])
+        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight Flat"])
+        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight with Collision"])
+        # self.pg.load_asset(SIMULATION_ENVIRONMENTS["Flight Flat"],  "/World/layout")
+        # self.world_offset_x, self.world_offset_y, self.world_offset_z = -599396.0, -120472.0, -71066.0
+        self.world_offset_x = 0.0
+        self.world_offset_y = 0.0
+        self.world_offset_z = 0.0
+        # self.world_offset_x = -606344.799574
+        # self.world_offset_y = -1586.657862
+        # self.world_offset_z = 1395514.256701
+        # self.world.reset()
+        self.create_landmarks()
+        
+        self.namespace = "/px4_"
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
-        for i in range(5):
-            self.vehicle_factory(i, gap_x_axis=1.0)
+        for i in range(3):
+            self.vehicle_factory(i+1, gap_x_axis=1.0)
         
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
@@ -75,6 +88,40 @@ class PegasusApp:
 
         # Auxiliar variable for the timeline callback example
         self.stop_sim = False
+
+    def create_landmarks(self):
+        from omni.isaac.core.objects import DynamicCuboid
+        import numpy as np
+        cube_1 = self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/new_cube_1",
+                name="cube_1",
+                position=np.array([self.world_offset_x + 8.0, self.world_offset_y + 0, self.world_offset_z + 50.0]),
+                scale=np.array([1.0, 1.0, 1.0]),
+                size=1.0,
+                color=np.array([255, 0, 0]),
+            )
+        )
+        cube_2 = self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/new_cube_2",
+                name="cube_2",
+                position=np.array([self.world_offset_x + 0.0, self.world_offset_y + 8.0, self.world_offset_z + 50.0]),
+                scale=np.array([1.0, 1.0, 1.0]),
+                size=1.0,
+                color=np.array([0, 255, 0]),
+            )
+        )
+        cube_3 = self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/new_cube_3",
+                name="cube_3",
+                position=np.array([self.world_offset_x + 0, self.world_offset_y + 0, self.world_offset_z + 50.0]),
+                scale=np.array([1.0, 1.0, 1.0]),
+                size=1.0,
+                color=np.array([0, 0, 255]),
+            )
+        )
 
     def vehicle_factory(self, vehicle_id: int, gap_x_axis: float):
         """Auxiliar method to create multiple multirotor vehicles
@@ -104,20 +151,44 @@ class PegasusApp:
                             "pub_state": True,
                             "sub_control": False,})]
 
-        config_multirotor.graphical_sensors = [MonocularCamera("/cgo3_camera_link/camera", config={"update_rate": 60.0, "position": np.array([0,0,0])})] # Lidar("lidar")
+        config_multirotor.graphical_sensors = [
+            MonocularCamera("/cgo3_camera_link/camera", 
+            config={
+                "update_rate": 60.0,
+                "position": np.array([0,0,0]),
+                "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
+                }
+            )
+        ] # Lidar("lidar")
 
         vehicle_name = self.namespace + str(vehicle_id)
-        vehicle_stage_path = "/World/" + vehicle_name
+        vehicle_stage_path = "/World" + vehicle_name
         # vehicle_stage_path = "/World/quadrotor"
+        
+
         Multirotor(
             vehicle_stage_path,
             ROBOTS['IrisGimbal'],
             vehicle_id,
-            [gap_x_axis * vehicle_id, 0.0, 0.07],
-            Rotation.from_euler("XYZ", [0.0, 0.0, 0.0], degrees=True).as_quat(),
+            [self.world_offset_x + gap_x_axis * (vehicle_id+1), self.world_offset_y + gap_x_axis * (vehicle_id+1), self.world_offset_z + 20.0],
+            Rotation.from_euler("XYZ", [0.0, 0.0, 3.14], degrees=True).as_quat(),
             config=config_multirotor)
         asyncio.ensure_future(self.create_ros_action_graph(vehicle_stage_path, vehicle_name))
+        # asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
         
+    async def create_ros_camera_graph(self, vehicle_stage_path, vehicle_name):
+        try:
+            await omni.kit.app.get_app().next_update_async()
+            camera_graph = bridge.Ros2CameraGraph()
+            # camera_graph._og_path = vehicle_stage_path + "/CameraGraph"
+            # camera_graph._camera_prim = vehicle_name + "/cgo3_camera_link/camera"
+            # camera_graph._node_namespace = vehicle_name
+            camera_graph.make_graph()
+        except Exception as e:
+            print(e)
+        pass
+
+
     async def create_ros_action_graph(self, vehicle_stage_path, vehicle_name):
         try:
             await omni.kit.app.get_app().next_update_async()
