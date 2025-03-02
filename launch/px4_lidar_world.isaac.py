@@ -23,7 +23,7 @@ from omni.isaac.core.world import World
 
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import ROBOTS, SIMULATION_ENVIRONMENTS
-from pegasus.simulator.logic.graphical_sensors.monocular_camera import MonocularCamera
+from pegasus.simulator.logic.graphical_sensors.lidar import Lidar
 from pegasus.simulator.logic.state import State
 from pegasus.simulator.logic.backends.px4_mavlink_backend import PX4MavlinkBackend, PX4MavlinkBackendConfig
 from pegasus.simulator.logic.backends.ros2_backend import ROS2Backend
@@ -39,6 +39,9 @@ import carb
 import omni.ext
 import omni.graph.core as og
 import omni.isaac.ros2_bridge as bridge
+
+import omni                                                     # Provides the core omniverse apis
+from omni.isaac.range_sensor import _range_sensor               # Imports the python bindings to interact with Lidar sensor
 
 class PegasusApp:
     """
@@ -64,23 +67,18 @@ class PegasusApp:
         # Launch one of the worlds provided by NVIDIA
         # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Plane with Light"])
         # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight"])
-        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight Flat"])
+        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight Flat"])
         # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight with Collision"])
+        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Full Warehouse"])
         # self.pg.load_asset(SIMULATION_ENVIRONMENTS["Flight Flat"],  "/World/layout")
-        self.world_offset_x, self.world_offset_y, self.world_offset_z = 0,0,25200
-        # self.world_offset_x = 0.0
-        # self.world_offset_y = 0.0
-        # self.world_offset_z = 0.0
-        # self.world_offset_x = -606344.799574
-        # self.world_offset_y = -1586.657862
-        # self.world_offset_z = 1395514.256701
-        # self.world.reset()
-        # asyncio.ensure_future(self.create_simulation_time_graph())
+        self.world_offset_x, self.world_offset_y, self.world_offset_z = 0,0,0
+        asyncio.ensure_future(self.create_simulation_time_graph())
         self.create_landmarks()
         
         self.namespace = "/px4_"
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
-        for i in range(3):
+        num_vehicle = 1
+        for i in range(num_vehicle):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
         
 
@@ -153,11 +151,10 @@ class PegasusApp:
                             "sub_control": False,})]
 
         config_multirotor.graphical_sensors = [
-            MonocularCamera("/cgo3_camera_link/camera", 
+            Lidar("/lidar", 
             config={
-                "update_rate": 60.0,
-                "position": np.array([0,0,0]),
-                "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
+                "sensor_configuration": "OS1_REV6_32ch10hz1024res",
+                "show_render": True,
                 }
             )
         ] # Lidar("lidar")
@@ -169,8 +166,8 @@ class PegasusApp:
 
         Multirotor(
             vehicle_stage_path,
-            # ROBOTS['Iris'],
-            ROBOTS['IrisGimbal'],
+            ROBOTS['Iris'],
+            # ROBOTS['IrisGimbal'],
             vehicle_id,
             [self.world_offset_x + gap_x_axis * (vehicle_id+1), self.world_offset_y + gap_x_axis * (vehicle_id+1), self.world_offset_z + 2.0],
             Rotation.from_euler("XYZ", [0.0, 0.0, 3.14], degrees=True).as_quat(),
@@ -282,6 +279,8 @@ class PegasusApp:
         except Exception as e:
             print(e)
         pass
+        
+
 
     def run(self):
         """
