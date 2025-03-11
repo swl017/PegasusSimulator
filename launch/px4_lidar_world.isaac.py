@@ -79,7 +79,7 @@ class PegasusApp:
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
         num_vehicle = 1
         for i in range(num_vehicle):
-            self.vehicle_factory(i+1, gap_x_axis=1.0)
+            self.vehicle_factory(i, gap_x_axis=1.0)
         
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
@@ -151,9 +151,9 @@ class PegasusApp:
                             "sub_control": False,})]
 
         config_multirotor.graphical_sensors = [
-            Lidar("/lidar", 
+            Lidar("lidar", 
             config={
-                "sensor_configuration": "OS1_REV6_32ch10hz1024res",
+                "sensor_configuration": "OS1_REV6_32ch10hz2048res",
                 "show_render": True,
                 }
             )
@@ -198,22 +198,14 @@ class PegasusApp:
                         ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
                         ("ReadSimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
                         ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
-                        # ("RTFPublisher", "omni.isaac.ros2_bridge.ROS2Publisher"),
-                        # ("RTF", "omni.isaac.ros2_bridge.IsaacRealTimeFactor"),
-
                     ],
                     og.Controller.Keys.CONNECT: [
-                        ("OnPlaybackTick.outputs:tick", "ReadSimTime.inputs:execIn"),
                         ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
-                        ("OnPlaybackTick.outputs:tick", "RTFPublisher.inputs:execIn"),
                         ("Context.outputs:context", "PublishClock.inputs:context"),
-                        ("Context.outputs:context", "RTFPublisher.inputs:context"),
                         ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
-                        # ("RTF.outputs:rtf", "RTFPublisher.inputs:data"),
                     ],
                     og.Controller.Keys.SET_VALUES: [
                         ("PublishClock.inputs:topicName", "/clock"),
-                        # ("RTFPublisher.inputs:topicName", "/realtime_factor"),
                     ],
                 },
             )
@@ -236,7 +228,7 @@ class PegasusApp:
                         ("PublishJointState", "omni.isaac.ros2_bridge.ROS2PublishJointState"),
                         ("SubscribeJointState", "omni.isaac.ros2_bridge.ROS2SubscribeJointState"),
                         ("ArticulationController", "omni.isaac.core_nodes.IsaacArticulationController"),
-                        ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
+                        # ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
                         # ("RTFPublisher", "omni.isaac.ros2_bridge.ROS2Publisher"),
                         # ("RTF", "omni.isaac.ros2_bridge.IsaacRealTimeFactor"),
 
@@ -244,12 +236,12 @@ class PegasusApp:
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
                         ("OnPlaybackTick.outputs:tick", "SubscribeJointState.inputs:execIn"),
-                        ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
+                        # ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
                         ("OnPlaybackTick.outputs:tick", "ArticulationController.inputs:execIn"),
                         ("Context.outputs:context", "PublishJointState.inputs:context"),
                         ("Context.outputs:context", "SubscribeJointState.inputs:context"),
                         ("Context.outputs:context", "PublishClock.inputs:context"),
-                        ("Context.outputs:context", "RTFPublisher.inputs:context"),
+                        # ("Context.outputs:context", "RTFPublisher.inputs:context"),
                         ("ReadSimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
                         ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
                         ("SubscribeJointState.outputs:jointNames", "ArticulationController.inputs:jointNames"),
