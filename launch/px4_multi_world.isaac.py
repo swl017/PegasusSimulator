@@ -62,12 +62,12 @@ class PegasusApp:
         self.world = self.pg.world
 
         # Launch one of the worlds provided by NVIDIA
-        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Plane with Light"])
+        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Plane with Light"])
         # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight"])
-        self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight Flat"])
+        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight Flat"])
         # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight with Collision"])
         # self.pg.load_asset(SIMULATION_ENVIRONMENTS["Flight Flat"],  "/World/layout")
-        self.world_offset_x, self.world_offset_y, self.world_offset_z = 0,0,25200
+        self.world_offset_x, self.world_offset_y, self.world_offset_z = 0,0,0#25200
         # self.world_offset_x = 0.0
         # self.world_offset_y = 0.0
         # self.world_offset_z = 0.0
@@ -75,12 +75,12 @@ class PegasusApp:
         # self.world_offset_y = -1586.657862
         # self.world_offset_z = 1395514.256701
         # self.world.reset()
-        # asyncio.ensure_future(self.create_simulation_time_graph())
+        asyncio.ensure_future(self.create_simulation_time_graph())
         self.create_landmarks()
         
         self.namespace = "/px4_"
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
-        for i in range(3):
+        for i in range(6):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
         
 
@@ -201,22 +201,14 @@ class PegasusApp:
                         ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
                         ("ReadSimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
                         ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
-                        # ("RTFPublisher", "omni.isaac.ros2_bridge.ROS2Publisher"),
-                        # ("RTF", "omni.isaac.ros2_bridge.IsaacRealTimeFactor"),
-
                     ],
                     og.Controller.Keys.CONNECT: [
-                        ("OnPlaybackTick.outputs:tick", "ReadSimTime.inputs:execIn"),
                         ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
-                        ("OnPlaybackTick.outputs:tick", "RTFPublisher.inputs:execIn"),
                         ("Context.outputs:context", "PublishClock.inputs:context"),
-                        ("Context.outputs:context", "RTFPublisher.inputs:context"),
                         ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
-                        # ("RTF.outputs:rtf", "RTFPublisher.inputs:data"),
                     ],
                     og.Controller.Keys.SET_VALUES: [
                         ("PublishClock.inputs:topicName", "/clock"),
-                        # ("RTFPublisher.inputs:topicName", "/realtime_factor"),
                     ],
                 },
             )
@@ -240,9 +232,6 @@ class PegasusApp:
                         ("SubscribeJointState", "omni.isaac.ros2_bridge.ROS2SubscribeJointState"),
                         ("ArticulationController", "omni.isaac.core_nodes.IsaacArticulationController"),
                         ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
-                        # ("RTFPublisher", "omni.isaac.ros2_bridge.ROS2Publisher"),
-                        # ("RTF", "omni.isaac.ros2_bridge.IsaacRealTimeFactor"),
-
                     ],
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
@@ -252,7 +241,6 @@ class PegasusApp:
                         ("Context.outputs:context", "PublishJointState.inputs:context"),
                         ("Context.outputs:context", "SubscribeJointState.inputs:context"),
                         ("Context.outputs:context", "PublishClock.inputs:context"),
-                        ("Context.outputs:context", "RTFPublisher.inputs:context"),
                         ("ReadSimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
                         ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
                         ("SubscribeJointState.outputs:jointNames", "ArticulationController.inputs:jointNames"),
@@ -265,14 +253,13 @@ class PegasusApp:
                             "ArticulationController.inputs:velocityCommand",
                         ),
                         ("SubscribeJointState.outputs:effortCommand", "ArticulationController.inputs:effortCommand"),
-                        # ("RTF.outputs:rtf", "RTFPublisher.inputs:data"),
                     ],
                     og.Controller.Keys.SET_VALUES: [
                         # Setting the /Franka target prim to Articulation Controller node
                         ("ArticulationController.inputs:robotPath", vehicle_stage_path),
                         ("PublishJointState.inputs:topicName", vehicle_name + "/isaac_joint_states"),
                         ("SubscribeJointState.inputs:topicName", vehicle_name + "/isaac_joint_commands"),
-                        ("PublishJointState.inputs:targetPrim", [vehicle_stage_path]),
+                        ("PublishJointState.inputs:targetPrim", vehicle_stage_path),
                         ("PublishClock.inputs:topicName", vehicle_name + "/clock"),
                         # ("RTFPublisher.inputs:topicName", vehicle_name + "/realtime_factor"),
                     ],

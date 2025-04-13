@@ -1,7 +1,18 @@
 {
     "version": "0.2.0",
     "configurations": [
-		{
+        {
+            "name": "Python: ROS",
+            "type": "python3",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${PYTHONPATH}:/opt/ros/noetic/lib/python3/dist-packages"
+            },
+            "preLaunchTask": "source-ros",
+        },
+        {
             "name": "Python: Attach (windows-x86_64/linux-x86_64)",
             "type": "python",
             "request": "attach",
