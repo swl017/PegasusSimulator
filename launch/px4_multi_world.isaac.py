@@ -79,6 +79,7 @@ class PegasusApp:
         self.create_landmarks()
         
         self.namespace = "/px4_"
+        self.vehicles = []
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
         for i in range(6):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
@@ -86,6 +87,35 @@ class PegasusApp:
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
         self.world.reset()
+
+        # OpenCV camera matrix and width and height of the camera sensor, from the calibration file
+        width, height = 1920, 1200
+        camera_matrix = [[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]]
+
+        # Pixel size in microns, aperture and focus distance from the camera sensor specification
+        # Note: to disable the depth of field effect, set the f_stop to 0.0. This is useful for debugging.
+        pixel_size = 3 * 1e-3   # in mm, 3 microns is a common pixel size for high resolution cameras
+        f_stop = 1.8            # f-number, the ratio of the lens focal length to the diameter of the entrance pupil
+        focus_distance = 50    # in meters, the distance from the camera to the object plane
+
+        # Calculate the focal length and aperture size from the camera matrix
+        ((fx,_,cx),(_,fy,cy),(_,_,_)) = camera_matrix
+        horizontal_aperture =  pixel_size * width                   # The aperture size in mm
+        vertical_aperture =  pixel_size * height
+        focal_length_x  = fx * pixel_size
+        focal_length_y  = fy * pixel_size
+        focal_length = (focal_length_x + focal_length_y) / 2         # The focal length in mm
+
+        for vehicle in self.vehicles:
+            for sensor in vehicle._graphical_sensors:
+                print(f"Camera Intrinsics: {sensor._intrinsics}")
+                # Set the camera parameters, note the unit conversion between Isaac Sim sensor and Kit
+                sensor._camera.set_focal_length(focal_length / 10.0)                # Convert from mm to cm (or 1/10th of a world unit)
+                sensor._camera.set_focus_distance(focus_distance)                   # The focus distance in meters
+                sensor._camera.set_lens_aperture(f_stop * 100.0)                    # Convert the f-stop to Isaac Sim units
+                sensor._camera.set_horizontal_aperture(horizontal_aperture / 10.0)  # Convert from mm to cm (or 1/10th of a world unit)
+                sensor._camera.set_vertical_aperture(vertical_aperture / 10.0)
+                sensor._camera.set_clipping_range(0.05, 1.0e5)
 
         # Auxiliar variable for the timeline callback example
         self.stop_sim = False
@@ -157,7 +187,8 @@ class PegasusApp:
             config={
                 "update_rate": 60.0,
                 "position": np.array([0,0,0]),
-                "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
+                # "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
+                "intrinsics": np.array([[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]])
                 }
             )
         ] # Lidar("lidar")
@@ -167,14 +198,14 @@ class PegasusApp:
         # vehicle_stage_path = "/World/quadrotor"
         
 
-        Multirotor(
+        self.vehicles += [Multirotor(
             vehicle_stage_path,
             # ROBOTS['Iris'],
             ROBOTS['IrisGimbal'],
             vehicle_id,
             [self.world_offset_x + gap_x_axis * (vehicle_id+1), self.world_offset_y + gap_x_axis * (vehicle_id+1), self.world_offset_z + 2.0],
             Rotation.from_euler("XYZ", [0.0, 0.0, 3.14], degrees=True).as_quat(),
-            config=config_multirotor)
+            config=config_multirotor)]
         asyncio.ensure_future(self.create_ros_action_graph(vehicle_stage_path, vehicle_name))
         # asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
         
