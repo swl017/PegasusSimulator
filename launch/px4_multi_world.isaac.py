@@ -90,7 +90,8 @@ class PegasusApp:
 
         # OpenCV camera matrix and width and height of the camera sensor, from the calibration file
         width, height = 1920, 1200
-        camera_matrix = [[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]]
+        camera_matrix = [[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]]
+        # camera_matrix = [[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]]
 
         # Pixel size in microns, aperture and focus distance from the camera sensor specification
         # Note: to disable the depth of field effect, set the f_stop to 0.0. This is useful for debugging.
@@ -180,15 +181,17 @@ class PegasusApp:
                             "pub_sensors": True,
                             "pub_graphical_sensors": True,
                             "pub_state": True,
-                            "sub_control": False,})]
+                            "sub_control": False,
+                            "sub_zoom": True,
+                        })]
 
         config_multirotor.graphical_sensors = [
             MonocularCamera("/cgo3_camera_link/camera", 
             config={
                 "update_rate": 60.0,
                 "position": np.array([0,0,0]),
-                # "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
-                "intrinsics": np.array([[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]])
+                "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
+                # "intrinsics": np.array([[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]])
                 }
             )
         ] # Lidar("lidar")
@@ -207,15 +210,15 @@ class PegasusApp:
             Rotation.from_euler("XYZ", [0.0, 0.0, 3.14], degrees=True).as_quat(),
             config=config_multirotor)]
         asyncio.ensure_future(self.create_ros_action_graph(vehicle_stage_path, vehicle_name))
-        # asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
+        asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
         
     async def create_ros_camera_graph(self, vehicle_stage_path, vehicle_name):
         try:
             await omni.kit.app.get_app().next_update_async()
             camera_graph = bridge.Ros2CameraGraph()
-            # camera_graph._og_path = vehicle_stage_path + "/CameraGraph"
-            # camera_graph._camera_prim = vehicle_name + "/cgo3_camera_link/camera"
-            # camera_graph._node_namespace = vehicle_name
+            camera_graph._og_path = vehicle_stage_path + "/CameraGraph"
+            camera_graph._camera_prim = vehicle_name + "/cgo3_camera_link/camera"
+            camera_graph._node_namespace = vehicle_name
             camera_graph.make_graph()
         except Exception as e:
             print(e)

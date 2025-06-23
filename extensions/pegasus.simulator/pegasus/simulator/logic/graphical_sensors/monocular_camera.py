@@ -68,6 +68,13 @@ class MonocularCamera(GraphicalSensor):
         self._camera_full_set = False
 
         self.counter = 0
+        self._original_intrinsics = self._intrinsics.copy()
+        
+        # Set the camera properties
+        self.pixel_size = 3 * 1e-3   # in mm, 3 microns is a common pixel size for high resolution cameras
+        self.f_stop = 1.8            # f-number, the ratio of the lens focal length to the diameter of the entrance pupil
+        self.focus_distance = 50    # in meters, the distance from the camera to the object plane
+
 
 
     def initialize(self, vehicle):
@@ -90,6 +97,46 @@ class MonocularCamera(GraphicalSensor):
         # Set the camera position locally with respect to the drone
         self._camera.set_local_pose(np.array(self._position), Rotation.from_euler("ZYX", self._orientation, degrees=True).as_quat())
         
+    def set_zoom(self, zoom: float):
+        """
+        Sets the zoom level of the camera by adjusting the focal length.
+
+        Args:
+            zoom (float): The desired zoom level (e.g., 1.0 for no zoom, 2.0 for 2x zoom).
+        """
+        if zoom < 1.0:
+            zoom = 1.0
+            
+        # Calculate the new focal lengths based on the zoom
+        new_fx = self._original_intrinsics[0, 0] * zoom
+        new_fy = self._original_intrinsics[1, 1] * zoom
+        
+        # Get the principal point from the original intrinsics
+        cx = self._original_intrinsics[0, 2]
+        cy = self._original_intrinsics[1, 2]
+        
+        # Update the camera's intrinsic matrix
+        self._intrinsics = np.array([[new_fx, 0.0, cx], [0.0, new_fy, cy], [0.0, 0.0, 1.0]])
+        horizontal_aperture =  self.pixel_size * self._resolution[0]                   # The aperture size in mm
+        vertical_aperture =  self.pixel_size * self._resolution[1]
+        focal_length_x  = new_fx * self.pixel_size
+        focal_length_y  = new_fy * self.pixel_size
+        focal_length = (focal_length_x + focal_length_y) / 2         # The focal length in mm
+
+        # Apply the new intrinsics to the camera if it's already running
+        # if self._camera_full_set:
+        # Note: The ability to set intrinsics at runtime depends on the Isaac Sim API.
+        # If a direct setter is not available, you might need to re-initialize the camera.
+        # Assuming a method like `set_intrinsics_matrix` exists:
+        self._camera.set_focal_length(focal_length / 10.0)                # Convert from mm to cm (or 1/10th of a world unit)
+        self._camera.set_focus_distance(self.focus_distance)                   # The focus distance in meters
+        self._camera.set_lens_aperture(self.f_stop * 100.0)                    # Convert the f-stop to Isaac Sim units
+        self._camera.set_horizontal_aperture(horizontal_aperture / 10.0)  # Convert from mm to cm (or 1/10th of a world unit)
+        self._camera.set_vertical_aperture(vertical_aperture / 10.0)
+        self._camera.set_clipping_range(0.05, 1.0e5)
+        # carb.log_info(f"Setting new zoom for '{self._camera_name}': {zoom}x")
+
+
     def start(self):
 
         # Set the camera intrinsics

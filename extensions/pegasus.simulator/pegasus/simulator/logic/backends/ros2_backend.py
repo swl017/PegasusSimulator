@@ -28,6 +28,7 @@ except ImportError:
     tf2_ros_loaded = False
 
 from pegasus.simulator.logic.backends.backend import Backend
+from pegasus.simulator.logic.graphical_sensors.monocular_camera import MonocularCamera
 
 # Import the replicatore core module used for writing graphical data to ROS 2
 import omni
@@ -70,6 +71,7 @@ class ROS2Backend(Backend):
             >>>  "pub_state": True,                             # Publish the state of the vehicle
             >>>  "pub_tf": False,                               # Publish the TF of the vehicle
             >>>  "sub_control": True,                           # Subscribe to the control topics
+            >>>  "sub_zoom": True,                              # Subscribe to the zoom topics
         """
 
         # Save the configurations for this backend
@@ -82,6 +84,7 @@ class ROS2Backend(Backend):
         self._pub_sensors = config.get("pub_sensors", True)
         self._pub_state = config.get("pub_state", True)
         self._sub_control = config.get("sub_control", True)
+        self._sub_zoom = config.get("sub_zoom", True)
 
         # Check if the tf2_ros library is loaded and if the flag is set to True
         self._pub_tf = config.get("pub_tf", False) and tf2_ros_loaded
@@ -106,6 +109,7 @@ class ROS2Backend(Backend):
         
         # Setup zero input reference for the thrusters
         self.input_ref = [0.0 for i in range(self._num_rotors)]
+        self.zoom_ref = 1.0
 
         # -----------------------------------------------------
         # Initialize the static and dynamic tf broadcasters
@@ -166,6 +170,7 @@ class ROS2Backend(Backend):
             self.rotor_subs = []
             for i in range(self._num_rotors):
                 self.rotor_subs.append(self.node.create_subscription(Float64, self._namespace + str(self._id) + "/control/rotor" + str(i) + "/ref", lambda x: self.rotor_callback(x, i),10))
+        self.zoom_sub = self.node.create_subscription(Float64, self._namespace + str(self._id) + "/control/zoom", self.zoom_callback, 10)
 
 
     def send_static_transforms(self):
@@ -283,6 +288,16 @@ class ROS2Backend(Backend):
     def rotor_callback(self, ros_msg: Float64, rotor_id):
         # Update the reference for the rotor of the vehicle
         self.input_ref[rotor_id] = float(ros_msg.data)
+
+    def zoom_callback(self, msg):
+        """
+        Callback for the zoom subscription.
+        """
+        # carb.log_info(f"Zoom set to {msg.data} for vehicle {self._id}")
+        for sensor in self._vehicle._graphical_sensors:
+            if isinstance(sensor, MonocularCamera):
+                sensor.set_zoom(msg.data)
+                # carb.log_info(f"Zoom set to {msg.data} for camera {sensor._camera_name} in vehicle {self._id}")
 
     def update_sensor(self, sensor_type: str, data):
         """
@@ -495,6 +510,14 @@ class ROS2Backend(Backend):
         """
         # Reset the reference for the thrusters
         self.input_ref = [0.0 for i in range(self._num_rotors)]
+        # Create a subscription for the zoom control
+        if self._sub_zoom:
+            self.zoom_sub = self.node.create_subscription(
+                Float64,
+                f"/{self._namespace + str(self._id)}/camera/zoom",
+                self.zoom_callback,
+                10
+            )
 
     def stop(self):
         """
