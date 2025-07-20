@@ -4,9 +4,9 @@ Installation
 Installing NVIDIA Isaac Sim
 ---------------------------
 
-.. image:: https://img.shields.io/badge/IsaacSim-4.2.0-brightgreen.svg
+.. image:: https://img.shields.io/badge/IsaacSim-4.5.0-brightgreen.svg
    :target: https://developer.nvidia.com/isaac-sim
-   :alt: IsaacSim 4.2.0
+   :alt: IsaacSim 4.5.0
 
 .. image:: https://img.shields.io/badge/PX4--Autopilot-1.14.3-brightgreen.svg
    :target: https://github.com/PX4/PX4-Autopilot
@@ -17,16 +17,34 @@ Installing NVIDIA Isaac Sim
    :alt: Ubuntu 22.04
 
 .. note::
-	We have tested Pegasus Simulator with Isaac Sim 4.2.0 release on Ubuntu 22.04LTS with NVIDIA driver 550.90.07. The PX4-Autopilot used during development was v.14.3. Older versions Ubuntu and PX4-Autopilot were not tested. This extension was not tested on Windows. 
+	We have tested Pegasus Simulator with Isaac Sim 4.5.0 release on Ubuntu 22.04LTS with NVIDIA driver 550.163.01. The PX4-Autopilot used during development was v.14.3. Older versions Ubuntu and PX4-Autopilot were not tested. This extension was not tested on Windows. 
 
-In order to install Isaac Sim on linux, download the `Omniverse AppImage here <https://install.launcher.omniverse.nvidia.com/installers/omniverse-launcher-linux.AppImage>`__ or run the following line on the terminal:
+In order to install Isaac Sim on linux, download the zip file containing the `Workstation Installation here <https://download.isaacsim.omniverse.nvidia.com/isaac-sim-standalone%404.5.0-rc.36%2Brelease.19112.f59b3005.gl.linux-x86_64.release.zip>`__ or run the following lines on the terminal:
 
 .. code:: bash
 
-    wget https://install.launcher.omniverse.nvidia.com/installers/omniverse-launcher-linux.AppImage
+    # Go to the home directory
+    cd ~
+
+    # Create a new directory to store the Isaac Sim installation
+    mkdir -p isaacsim
+    cd isaacsim
+
+    # Download the zip file containing the Isaac Sim installation
+    wget https://download.isaacsim.omniverse.nvidia.com/isaac-sim-standalone%404.5.0-rc.36%2Brelease.19112.f59b3005.gl.linux-x86_64.release.zip
+
+    # Unzip the file
+    unzip isaac-sim-standalone%404.5.0-rc.36%2Brelease.19112.f59b3005.gl.linux-x86_64.release.zip
+
+    # Run the post-installation scripts
+    ./post_install.sh
+    ./isaac-sim.selector.sh
+
+    # Delete the zip file
+    rm isaac-sim-standalone%404.5.0-rc.36%2Brelease.19112.f59b3005.gl.linux-x86_64.release.zip
 
 
-A short video with the installation guide for Pegasus Simulator is also available `here <https://youtu.be/YCp5E8nazag>`__.
+The short video with the installation guide for Pegasus Simulator is also available `here <https://youtu.be/YCp5E8nazag>`__, but the Isaac Sim install method presented is no longer available. You should follow the instructions above to install Isaac Sim 4.5.0. **See video from 1:25 min onwards for the installation of Pegasus Simulator.**
 
     ..  youtube:: YCp5E8nazag
         :width: 100%
@@ -43,19 +61,17 @@ from python scripts. As such, we recommend setting up a few custom environment v
 
 .. note::
     Although it is possible to setup a virtual environment following the 
-    instructions `here <https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_python.html>`__, this
+    instructions `here <https://docs.isaacsim.omniverse.nvidia.com/4.5.0/installation/install_python.html>`__, this
     feature was not tested.
 
-Start by locating the `Isaac Sim installation <https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_python.html>`__ 
-by navigating to Isaac Sim's root folder. Typically, in Linux, this folder can be found under ``${HOME}/.local/share/ov/pkg/isaac_sim-*``,
-where the ``*`` is the version number.
+Start by locating the **Isaac Sim installation** by navigating to Isaac Sim's root folder. Typically, in Linux, this folder can be found under ``${HOME}/isaac_sim``.
 
 Add the following lines to your ``~/.bashrc`` or ``~/.zshrc`` file.
 
 .. code:: bash
 
    # Isaac Sim root directory
-   export ISAACSIM_PATH="${HOME}/.local/share/ov/pkg/isaac_sim-4.2.0"
+   export ISAACSIM_PATH="${HOME}/isaacsim"
    # Isaac Sim python executable
    alias ISAACSIM_PYTHON="${ISAACSIM_PATH}/python.sh"
    # Isaac Sim app
@@ -88,7 +104,7 @@ open a new terminal window (**Ctrl+Alt+T**), and test the following commands:
         ISAACSIM_PYTHON -c "print('Hello World.')"
 
         # Run the python interpreter and check if we can run a script that starts the simulator and adds cubes to the world
-        ISAACSIM_PYTHON ${ISAACSIM_PATH}/standalone_examples/api/omni.isaac.core/add_cubes.py
+        ISAACSIM_PYTHON ${ISAACSIM_PATH}/standalone_examples/api/isaacsim.core.api/add_cubes.py
 
 If you were unable to run the commands above successfuly, then something is incorrectly configured. 
 Please do not proceed with this installation until you have everything setup correctly.

@@ -8,6 +8,7 @@
 
 # Imports to start Isaac Sim from this script
 import carb
+
 from isaacsim import SimulationApp
 
 # Start Isaac Sim's simulation environment
@@ -20,29 +21,10 @@ simulation_app = SimulationApp({"headless": False})
 # -----------------------------------
 import omni.timeline
 from omni.isaac.core.world import World
-from omni.isaac.core.utils.extensions import disable_extension, enable_extension
-
-EXTENSIONS_PEOPLE = [
-    'omni.anim.people', 
-    'omni.anim.navigation.bundle', 
-    'omni.anim.timeline',
-    'omni.anim.graph.bundle', 
-    'omni.anim.graph.core', 
-    'omni.anim.graph.ui',
-    'omni.anim.retarget.bundle', 
-    'omni.anim.retarget.core',
-    'omni.anim.retarget.ui', 
-    'omni.kit.scripting',
-    'omni.graph.io',
-    'omni.anim.curve.core',
-]
-
-for ext_people in EXTENSIONS_PEOPLE:
-    enable_extension(ext_people)
+from isaacsim.core.utils.extensions import enable_extension
 
 # Enable/disable ROS bridge extensions to keep only ROS2 Bridge
-disable_extension("omni.isaac.ros_bridge")
-enable_extension("omni.isaac.ros2_bridge")
+enable_extension("isaacsim.ros2.bridge")
 
 # Update the simulation app with the new extensions
 simulation_app.update()
@@ -134,15 +116,14 @@ class PegasusApp:
         p2 = Person("person2", "original_female_adult_business_02", init_pos=[2.0, 0.0, 0.0])
         p2.update_target_position([10.0, 0.0, 0.0], 1.0)
 
-        # Create the vehicle
-        # Try to spawn the selected robot in the world to the specified namespace
         config_multirotor = MultirotorConfig()
-        # # Create the multirotor configuration
+        # Create the multirotor configuration
         mavlink_config = PX4MavlinkBackendConfig({
             "vehicle_id": 0,
             "px4_autolaunch": True,
             "px4_dir": "/home/marcelo/PX4-Autopilot"
         })
+
         config_multirotor.backends = [
             PX4MavlinkBackend(mavlink_config),
             ROS2Backend(vehicle_id=1, 
@@ -153,10 +134,9 @@ class PegasusApp:
                     "pub_state": True,
                     "pub_tf": False,
                     "sub_control": False,})]
-
-        # Create a camera
+        
         config_multirotor.graphical_sensors = [MonocularCamera("camera", config={"update_rate": 60.0})]
-
+        
         Multirotor(
             "/World/quadrotor",
             ROBOTS['Iris'],

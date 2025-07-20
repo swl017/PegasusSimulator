@@ -21,6 +21,8 @@ simulation_app = SimulationApp({"headless": False})
 # -----------------------------------
 import omni.timeline
 from omni.isaac.core.world import World
+from omni.isaac.core.objects import DynamicCuboid
+import numpy as np
 
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import ROBOTS, SIMULATION_ENVIRONMENTS
@@ -56,8 +58,7 @@ class PegasusApp:
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
 
-        from omni.isaac.core.objects import DynamicCuboid
-        import numpy as np
+        
         cube_2 = self.world.scene.add(
             DynamicCuboid(
                 prim_path="/new_cube_2",

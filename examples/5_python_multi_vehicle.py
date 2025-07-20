@@ -23,7 +23,7 @@ import omni.timeline
 from omni.isaac.core.world import World
 
 # Used for adding extra lights to the environment
-import omni.isaac.core.utils.prims as prim_utils
+import isaacsim.core.utils.prims as prim_utils
 
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import ROBOTS
@@ -43,7 +43,7 @@ from scipy.spatial.transform import Rotation
 from pathlib import Path
 
 import random
-from omni.isaac.debug_draw import _debug_draw
+from isaacsim.util.debug_draw import _debug_draw
 
 
 class PegasusApp:
@@ -76,8 +76,11 @@ class PegasusApp:
             attributes={
                 "inputs:intensity": 5e3,
                 "inputs:color": (1.0, 1.0, 1.0),
-                "inputs:texture:file": "omniverse://localhost/NVIDIA/Assets/Skies/Indoor/ZetoCGcom_ExhibitionHall_Interior1.hdr"
+                "inputs:texture:file": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/NVIDIA/Assets/Skies/Indoor/ZetoCGcom_ExhibitionHall_Interior1.hdr"
+                # Alternative sky: https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/NVIDIA/Assets/Skies/Cloudy/abandoned_parking_4k.hdr
             }
+
+            
         )
 
         # Get the current directory used to read trajectories and save results

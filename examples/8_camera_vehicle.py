@@ -22,6 +22,9 @@ simulation_app = SimulationApp({"headless": False})
 import omni.timeline
 from omni.isaac.core.world import World
 
+from omni.isaac.core.objects import DynamicCuboid
+import numpy as np
+
 # Import the Pegasus API for simulating drones
 from pegasus.simulator.params import ROBOTS, SIMULATION_ENVIRONMENTS
 from pegasus.simulator.logic.graphical_sensors.monocular_camera import MonocularCamera
@@ -58,8 +61,6 @@ class PegasusApp:
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Curved Gridroom"])
 
-        from omni.isaac.core.objects import DynamicCuboid
-        import numpy as np
         cube_2 = self.world.scene.add(
             DynamicCuboid(
                 prim_path="/new_cube_2",
@@ -91,7 +92,7 @@ class PegasusApp:
                             "sub_control": False,})]
 
         # Create a camera and lidar sensors
-        config_multirotor.graphical_sensors = [MonocularCamera("camera", config={"update_rate": 60.0})] # Lidar("lidar")
+        config_multirotor.graphical_sensors = [MonocularCamera("camera", config={"update_rate": 60.0})]
         
         Multirotor(
             "/World/quadrotor",

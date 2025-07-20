@@ -24,7 +24,7 @@ import omni.timeline
 from omni.isaac.core.world import World
 
 # Used for adding extra lights to the environment
-import omni.isaac.core.utils.prims as prim_utils
+import isaacsim.core.utils.prims as prim_utils
 
 import omni.kit.commands
 from pxr import Sdf
@@ -46,7 +46,7 @@ from scipy.spatial.transform import Rotation
 # Use pathlib for parsing the desired trajectory from a CSV file
 from pathlib import Path
 
-from omni.isaac.debug_draw import _debug_draw
+from isaacsim.util.debug_draw import _debug_draw
 
 
 class PegasusApp:
@@ -78,7 +78,7 @@ class PegasusApp:
             attributes={
                 "inputs:intensity": 5e3,
                 "inputs:color": (1.0, 1.0, 1.0),
-                "inputs:texture:file": "omniverse://localhost/NVIDIA/Assets/Skies/Indoor/ZetoCGcom_ExhibitionHall_Interior1.hdr"
+                "inputs:texture:file": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/NVIDIA/Assets/Skies/Indoor/ZetoCGcom_ExhibitionHall_Interior1.hdr"
             }
         )
 

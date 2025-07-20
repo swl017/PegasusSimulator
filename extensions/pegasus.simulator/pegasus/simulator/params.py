@@ -7,7 +7,7 @@
 import os
 from pathlib import Path
 
-import omni.isaac.nucleus as nucleus
+import isaacsim.storage.native as nucleus
 
 # Extension configuration
 EXTENSION_NAME = "Pegasus Simulator"
@@ -51,8 +51,9 @@ NVIDIA_SIMULATION_ENVIRONMENTS = {
 }
 
 OMNIVERSE_ENVIRONMENTS = {
-    "Exhibition Hall": "omniverse://localhost/NVIDIA/Assets/Scenes/Templates/Interior/ZetCG_ExhibitionHall.usd"
+    "Exhibition Hall": "https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.5/NVIDIA/Assets/Scenes/Templates/Interior/ZetCG_ExhibitionHall.usd"
 }
+
 
 SIMULATION_ENVIRONMENTS = {}
 

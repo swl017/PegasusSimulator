@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath("../extensions/pegasus.simulator/pegasus/simu
 project = "Pegasus Simulator"
 copyright = "2023, Marcelo Jacinto"
 author = "Marcelo Jacinto"
-version = "1.0.0"
+version = "4.5.0"
 
 # -- General configuration ---------------------------------------------------
 
@@ -130,7 +130,9 @@ autodoc_mock_imports = [
     "rclpy",
     "std_msgs",
     "sensor_msgs",
-    "geometry_msgs"
+    "geometry_msgs",
+    "isaacsim",
+    "NavSchema"
 ]
 
 # -- Options for HTML output -------------------------------------------------

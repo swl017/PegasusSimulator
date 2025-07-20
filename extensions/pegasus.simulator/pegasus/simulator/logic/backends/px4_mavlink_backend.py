@@ -567,6 +567,10 @@ class PX4MavlinkBackend(Backend):
         if an hearbeat is received via mavlink. When this first heartbeat is received poll for mavlink messages
         """
 
+        # Wait for the connection to be established
+        if self._connection is None:
+            return 
+
         carb.log_warn("Waiting for first hearbeat")
         result = self._connection.wait_heartbeat(blocking=False)
 

@@ -6,10 +6,10 @@ __all__ = ["ROS2CameraGraph"]
 
 import carb
 
-from omni.isaac.core.utils import stage
+from isaacsim.core.utils import stage
 import omni.graph.core as og
-from omni.isaac.core.utils.prims import is_prim_path_valid
-from omni.isaac.core.utils.prims import set_targets
+from isaacsim.core.utils.prims import is_prim_path_valid
+from isaacsim.core.utils.prims import set_targets
 from omni.isaac.sensor import Camera
 
 from pegasus.simulator.logic.graphs import Graph
@@ -119,10 +119,10 @@ class ROS2CameraGraph(Graph):
         graph_config = {
             keys.CREATE_NODES: [
                 ("on_tick", "omni.graph.action.OnTick"),
-                ("create_viewport", "omni.isaac.core_nodes.IsaacCreateViewport"),
-                ("get_render_product", "omni.isaac.core_nodes.IsaacGetViewportRenderProduct"),
-                ("set_viewport_resolution", "omni.isaac.core_nodes.IsaacSetViewportResolution"),
-                ("set_camera", "omni.isaac.core_nodes.IsaacSetCameraOnRenderProduct"),
+                ("create_viewport", "isaacsim.core.nodes.IsaacCreateViewport"),
+                ("get_render_product", "isaacsim.core.nodes.IsaacGetViewportRenderProduct"),
+                ("set_viewport_resolution", "isaacsim.core.nodes.IsaacSetViewportResolution"),
+                ("set_camera", "isaacsim.core.nodes.IsaacSetCameraOnRenderProduct"),
             ],
             keys.CONNECT: [
                 ("on_tick.outputs:tick", "create_viewport.inputs:execIn"),
@@ -150,7 +150,7 @@ class ROS2CameraGraph(Graph):
             camera_helper_name = f"camera_helper_{camera_type}"
 
             graph_config[keys.CREATE_NODES] += [
-                (camera_helper_name, "omni.isaac.ros2_bridge.ROS2CameraHelper")
+                (camera_helper_name, "isaacsim.ros2.bridge.ROS2CameraHelper")
             ]
             graph_config[keys.CONNECT] += [
                 ("set_camera.outputs:execOut", f"{camera_helper_name}.inputs:execIn"),
@@ -178,8 +178,8 @@ class ROS2CameraGraph(Graph):
 
         # Create the camera graph
         (graph, _, _, _) = og.Controller.edit(
-            graph_specs,
-            graph_config
+             graph_specs,
+             graph_config
         )
 
         # Connect camera to the graphs
