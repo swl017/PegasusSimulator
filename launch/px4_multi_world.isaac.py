@@ -78,10 +78,10 @@ class PegasusApp:
         asyncio.ensure_future(self.create_simulation_time_graph())
         self.create_landmarks()
         
-        self.namespace = "/px4_"
+        self.namespace = "px4_"
         self.vehicles = []
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
-        for i in range(6):
+        for i in range(2):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
         
 
@@ -197,7 +197,7 @@ class PegasusApp:
         ] # Lidar("lidar")
 
         vehicle_name = self.namespace + str(vehicle_id)
-        vehicle_stage_path = "/World" + vehicle_name
+        vehicle_stage_path = "/World/" + vehicle_name
         # vehicle_stage_path = "/World/quadrotor"
         
 

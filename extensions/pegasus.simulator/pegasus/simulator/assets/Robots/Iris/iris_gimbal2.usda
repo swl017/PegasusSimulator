@@ -1776,7 +1776,6 @@ def Xform "vehicle" (
         quatd xformOp:orient = (1, 0, 0, 0)
         double3 xformOp:scale = (1, 1, 1)
         double3 xformOp:translate = (0.1, 0, 0.1)
-        # double3 xformOp:translate = (0.1, 0, -0.04999999999999999)
         point3f physics:centerOfMass = (0, 0, 0)
         float3 physics:diagonalInertia = (0.00000001, 0.00000001, 0.00000001)
         float physics:mass = 0.001
@@ -1796,8 +1795,9 @@ def Xform "vehicle" (
             rel physics:body1 = </vehicle/yaw_link>
             float physics:breakForce = inf
             float physics:breakTorque = inf
-            point3f physics:localPos0 = (0, 0, 0)
+            point3f physics:localPos0 = (0, 0, 0.1)
             point3f physics:localPos1 = (0, 0, 0)
+            # quatf physics:localRot0 = (1, 0, 0, 0)
             quatf physics:localRot0 = (0.70711, 0, 0, -0.70710355)
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
@@ -1810,8 +1810,8 @@ def Xform "vehicle" (
         bool physics:kinematicEnabled = 0
         quatd xformOp:orient = (1, 0, 0, 0)
         double3 xformOp:scale = (1, 1, 1)
+        # double3 xformOp:translate = (0, 0, 0)
         double3 xformOp:translate = (0.1, 0, 0.1)
-        # double3 xformOp:translate = (0.1, 0, -0.04999999999999999)
         point3f physics:centerOfMass = (0, 0, 0)
         float3 physics:diagonalInertia = (0.00000001, 0.00000001, 0.00000001)
         float physics:mass = 0.001
@@ -1845,8 +1845,8 @@ def Xform "vehicle" (
         bool physics:kinematicEnabled = 0
         quatd xformOp:orient = (1, 0, 0, 0)
         double3 xformOp:scale = (1, 1, 1)
+        # double3 xformOp:translate = (0, 0, 0)
         double3 xformOp:translate = (0.1, 0, 0.1)
-        # double3 xformOp:translate = (0.1, 0, -0.04999999999999999)
         point3f physics:centerOfMass = (0, 0, 0)
         float3 physics:diagonalInertia = (0.00000001, 0.00000001, 0.00000001)
         float physics:mass = 0.001
@@ -1880,7 +1880,8 @@ def Xform "vehicle" (
         #     token visibility = "invisible"
         #     quatd xformOp:orient = (0.5, 0.5, -0.5, -0.5)
         #     double3 xformOp:scale = (1, 1, 1)
-        #     double3 xformOp:translate = (0.1, 0, 0.1)
+        #     double3 xformOp:translate = (0, 0, 0)
+        #     # double3 xformOp:translate = (0.1, 0, 0.1)
         #     uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
         # }
     }
