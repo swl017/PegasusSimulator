@@ -87,13 +87,16 @@ class Multirotor(Vehicle):
         self._thrusters = config.thrust_curve
         self._drag = config.drag
 
+        # Cached articulation handle (resolved on first physics step)
+        self._articulation_handle = None
+
     def start(self):
         """In this case we do not need to do anything extra when the simulation starts"""
         pass
 
     def stop(self):
         """In this case we do not need to do anything extra when the simulation stops"""
-        pass
+        self._articulation_handle = None
 
     def update(self, dt: float):
         """
@@ -105,8 +108,13 @@ class Multirotor(Vehicle):
             dt (float): The time elapsed between the previous and current function calls (s).
         """
 
-        # Get the articulation root of the vehicle
-        articulation = self.get_dc_interface().get_articulation(self._stage_prefix)
+        # Get the articulation root of the vehicle (cached with fallback to /body)
+        if self._articulation_handle is None:
+            art = self.get_dc_interface().get_articulation(self._stage_prefix)
+            if art == _dynamic_control.INVALID_HANDLE:
+                art = self.get_dc_interface().get_articulation(self._stage_prefix + "/body")
+            self._articulation_handle = art
+        articulation = self._articulation_handle
 
         # Get the desired angular velocities for each rotor from the first backend (can be mavlink or other) expressed in rad/s
         if len(self._backends) != 0:

@@ -1,0 +1,69 @@
+{
+  "project": "PegasusSimulator",
+  "last_updated": "2026-03-24",
+  "features": [
+    {
+      "id": "interface",
+      "name": "PegasusInterface singleton orchestrator",
+      "status": "done",
+      "spec": null,
+      "notes": "Thread-safe singleton managing World, VehicleManager, global config"
+    },
+    {
+      "id": "vehicles",
+      "name": "Vehicle base class and Multirotor specialization",
+      "status": "done",
+      "spec": null,
+      "notes": "Vehicle, Multirotor, MultirotorConfig, Iris, TyphoonH480 presets"
+    },
+    {
+      "id": "backends",
+      "name": "PX4, ArduPilot, and ROS2 communication backends",
+      "status": "done",
+      "spec": null,
+      "notes": "MAVLink for PX4/ArduPilot, ROS2 topic publishing (optional)"
+    },
+    {
+      "id": "sensors",
+      "name": "IMU, GPS, Barometer, Magnetometer sensor models",
+      "status": "done",
+      "spec": null,
+      "notes": "Noise models, bias simulation, global coordinate transforms"
+    },
+    {
+      "id": "graphical-sensors",
+      "name": "Camera and LiDAR graphical sensors",
+      "status": "done",
+      "spec": null,
+      "notes": "MonocularCamera implemented. LiDAR commented out in __init__.py"
+    },
+    {
+      "id": "dynamics",
+      "name": "Aerodynamic drag models",
+      "status": "done",
+      "spec": null,
+      "notes": "LinearDrag: F = -diag(coeffs) * v_body"
+    },
+    {
+      "id": "thrusters",
+      "name": "Motor thrust curve models",
+      "status": "done",
+      "spec": null,
+      "notes": "QuadraticThrustCurve: F = k * omega^2"
+    },
+    {
+      "id": "people",
+      "name": "Pedestrian simulation system",
+      "status": "done",
+      "spec": null,
+      "notes": "Person actors with waypoint-based movement controllers"
+    },
+    {
+      "id": "graphs",
+      "name": "OmniGraph computation graphs",
+      "status": "done",
+      "spec": null,
+      "notes": "ROS2CameraGraph for publishing camera data to ROS2"
+    }
+  ]
+}

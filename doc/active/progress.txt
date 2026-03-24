@@ -1,0 +1,18 @@
+========================================
+SESSION LOG — PegasusSimulator
+========================================
+Append to this file at the end of each session.
+Format: date, what was done, what's next.
+
+----------------------------------------
+2026-03-24 — Harness setup
+----------------------------------------
+Done:
+- Created CLAUDE.md at PegasusSimulator root (session workflow protocol)
+- Created ARCHITECTURE.md at logic/ (component dependency graph, data flow)
+- Created CONTEXT.md for all 8 logic components (interface, vehicles, backends, sensors, graphical_sensors, dynamics, thrusters, people)
+- Created doc/active/ with feature_list.json (9 features tracked) and this progress file
+
+Next:
+- Review and refine CONTEXT.md files as components evolve
+- Add specs for components that need formal documentation
