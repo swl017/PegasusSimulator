@@ -28,6 +28,7 @@ except ImportError:
     tf2_ros_loaded = False
 
 from pegasus.simulator.logic.backends.backend import Backend
+from pegasus.simulator.logic.graphical_sensors.monocular_camera import MonocularCamera
 
 # Import the replicatore core module used for writing graphical data to ROS 2
 import omni
@@ -82,6 +83,7 @@ class ROS2Backend(Backend):
         self._pub_sensors = config.get("pub_sensors", True)
         self._pub_state = config.get("pub_state", True)
         self._sub_control = config.get("sub_control", True)
+        self._sub_zoom = config.get("sub_zoom", True)
 
         # Check if the tf2_ros library is loaded and if the flag is set to True
         self._pub_tf = config.get("pub_tf", False) and tf2_ros_loaded
@@ -284,6 +286,12 @@ class ROS2Backend(Backend):
         # Update the reference for the rotor of the vehicle
         self.input_ref[rotor_id] = float(ros_msg.data)
 
+    def zoom_callback(self, msg):
+        """Callback for the zoom subscription."""
+        for sensor in self._vehicle._graphical_sensors:
+            if isinstance(sensor, MonocularCamera):
+                sensor.set_zoom(msg.data)
+
     def update_sensor(self, sensor_type: str, data):
         """
         Method that when implemented, should handle the receival of sensor data
@@ -399,7 +407,7 @@ class ROS2Backend(Backend):
 
         # Create the writer for the rgb camera
         writer = rep.writers.get("LdrColorSDROS2PublishImage")
-        writer.initialize(nodeNamespace=self._namespace + str(self._id), topicName=data["camera_name"] + "/color/image_raw", frameId=data["camera_name"], queueSize=1)
+        writer.initialize(nodeNamespace=self._namespace + str(self._id), topicName="camera/color/image_raw", frameId=data["camera_name"], queueSize=1)
         writer.attach([render_prod_path])
 
         # Add the writer to the dictionary
@@ -410,7 +418,7 @@ class ROS2Backend(Backend):
 
             # Create the writer for the depth camera
             writer_depth = rep.writers.get("DistanceToImagePlaneSDROS2PublishImage")
-            writer_depth.initialize(nodeNamespace=self._namespace + str(self._id), topicName=data["camera_name"] + "/depth", frameId=data["camera_name"], queueSize=1)
+            writer_depth.initialize(nodeNamespace=self._namespace + str(self._id), topicName="camera/depth", frameId=data["camera_name"], queueSize=1)
             writer_depth.attach([render_prod_path])
 
             # Add the writer to the dictionary
@@ -421,7 +429,7 @@ class ROS2Backend(Backend):
         camera_info = read_camera_info(render_product_path=render_prod_path)
         writer_info.initialize(
             nodeNamespace=self._namespace + str(self._id), 
-            topicName=data["camera_name"] + "/color/camera_info", 
+            topicName="camera/color/camera_info",
             frameId=data["camera_name"], 
             queueSize=1,
             width=camera_info["width"],
@@ -495,6 +503,14 @@ class ROS2Backend(Backend):
         """
         # Reset the reference for the thrusters
         self.input_ref = [0.0 for i in range(self._num_rotors)]
+        # Create a subscription for the zoom control
+        if self._sub_zoom:
+            self.zoom_sub = self.node.create_subscription(
+                Float64,
+                f"/{self._namespace + str(self._id)}/camera/zoom",
+                self.zoom_callback,
+                10
+            )
 
     def stop(self):
         """

@@ -110,9 +110,10 @@ class Multirotor(Vehicle):
 
         # Get the articulation root of the vehicle (cached with fallback to /body)
         if self._articulation_handle is None:
-            art = self.get_dc_interface().get_articulation(self._stage_prefix)
-            if art == _dynamic_control.INVALID_HANDLE:
-                art = self.get_dc_interface().get_articulation(self._stage_prefix + "/body")
+            art = self.get_dc_interface().get_articulation(self._stage_prefix + "/body")
+            # art = self.get_dc_interface().get_articulation(self._stage_prefix)
+            # if art == _dynamic_control.INVALID_HANDLE:
+            #     art = self.get_dc_interface().get_articulation(self._stage_prefix + "/body")
             self._articulation_handle = art
         articulation = self._articulation_handle
 
@@ -161,6 +162,10 @@ class Multirotor(Vehicle):
 
         # Rotate the joint to yield the visual of a rotor spinning (for animation purposes only)
         joint = self.get_dc_interface().find_articulation_dof(articulation, "joint" + str(rotor_number))
+
+        # Skip if joint not found (e.g. rotors without PhysicsArticulationLinkAPI)
+        if joint == _dynamic_control.INVALID_HANDLE:
+            return
 
         # Spinning when armed but not applying force
         if 0.0 < force < 0.1:

@@ -7,13 +7,18 @@
 """
 
 # Imports to start Isaac Sim from this script
+import argparse
 import carb
 from isaacsim import SimulationApp
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--headless", action="store_true", default=False, help="Run in headless mode")
+args, _ = parser.parse_known_args()
 
 # Start Isaac Sim's simulation environment
 # Note: this simulation app must be instantiated right after the SimulationApp import, otherwise the simulator will crash
 # as this is the object that will load all the extensions and load the actual simulator.
-simulation_app = SimulationApp({"headless": False})
+simulation_app = SimulationApp({"headless": args.headless})
 
 # -----------------------------------
 # The actual script should start here
@@ -186,10 +191,11 @@ class PegasusApp:
                         })]
 
         config_multirotor.graphical_sensors = [
-            MonocularCamera("/pitch_link/cgo3_camera_link/camera",
+            MonocularCamera("/pitch_link/camera",
             config={
                 "update_rate": 60.0,
-                "position": np.array([0,0,0]),
+                "position": np.array([0, 0, 0]),
+                "orientation": np.array([0.0, 0.0, -90.0]),
                 "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
                 # "intrinsics": np.array([[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]])
                 }
@@ -210,14 +216,14 @@ class PegasusApp:
             Rotation.from_euler("XYZ", [0.0, 0.0, 3.14], degrees=True).as_quat(),
             config=config_multirotor)]
         asyncio.ensure_future(self.create_ros_action_graph(vehicle_stage_path, vehicle_name))
-        asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
+        # asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
         
     async def create_ros_camera_graph(self, vehicle_stage_path, vehicle_name):
         try:
             await omni.kit.app.get_app().next_update_async()
             camera_graph = bridge.Ros2CameraGraph()
             camera_graph._og_path = vehicle_stage_path + "/CameraGraph"
-            camera_graph._camera_prim = vehicle_name + "/pitch_link/cgo3_camera_link/camera"
+            camera_graph._camera_prim = vehicle_name + "/pitch_link/camera"
             camera_graph._node_namespace = vehicle_name
             camera_graph.make_graph()
         except Exception as e:
