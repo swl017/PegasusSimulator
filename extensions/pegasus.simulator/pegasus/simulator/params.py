@@ -94,7 +94,7 @@ WORLD_SETTINGS = {
     'px4': {
         "physics_dt": 1.0 / 250.0,
         "stage_units_in_meters": 1.0,
-        "rendering_dt": 1.0 / 30.0,
+        "rendering_dt": 1.0 / 100.0,
         "device": "cpu"
     },
     'ardupilot': {

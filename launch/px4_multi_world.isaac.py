@@ -210,7 +210,7 @@ class PegasusApp:
             Rotation.from_euler("XYZ", [0.0, 0.0, 3.14], degrees=True).as_quat(),
             config=config_multirotor)]
         asyncio.ensure_future(self.create_ros_action_graph(vehicle_stage_path, vehicle_name))
-        asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
+        # asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
         
     async def create_ros_camera_graph(self, vehicle_stage_path, vehicle_name):
         try:
@@ -231,10 +231,10 @@ class PegasusApp:
                 {"graph_path": "/World/SimulationTimeGraph", "evaluator_name": "execution"},
                 {
                     og.Controller.Keys.CREATE_NODES: [
-                        ("Context", "omni.isaac.ros2_bridge.ROS2Context"),
+                        ("Context", "isaacsim.ros2.bridge.ROS2Context"),
                         ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                        ("ReadSimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
-                        ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
+                        ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                        ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
                     ],
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
@@ -260,12 +260,12 @@ class PegasusApp:
                 {
                     og.Controller.Keys.CREATE_NODES: [
                         ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                        ("ReadSimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
-                        ("Context", "omni.isaac.ros2_bridge.ROS2Context"),
-                        ("PublishJointState", "omni.isaac.ros2_bridge.ROS2PublishJointState"),
-                        ("SubscribeJointState", "omni.isaac.ros2_bridge.ROS2SubscribeJointState"),
-                        ("ArticulationController", "omni.isaac.core_nodes.IsaacArticulationController"),
-                        ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
+                        ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                        ("Context", "isaacsim.ros2.bridge.ROS2Context"),
+                        ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
+                        ("SubscribeJointState", "isaacsim.ros2.bridge.ROS2SubscribeJointState"),
+                        ("ArticulationController", "isaacsim.core.nodes.IsaacArticulationController"),
+                        ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
                     ],
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
@@ -290,10 +290,10 @@ class PegasusApp:
                     ],
                     og.Controller.Keys.SET_VALUES: [
                         # Setting the /Franka target prim to Articulation Controller node
-                        ("ArticulationController.inputs:robotPath", vehicle_stage_path),
+                        ("ArticulationController.inputs:robotPath", vehicle_stage_path + "/body"),
                         ("PublishJointState.inputs:topicName", vehicle_name + "/isaac_joint_states"),
                         ("SubscribeJointState.inputs:topicName", vehicle_name + "/isaac_joint_commands"),
-                        ("PublishJointState.inputs:targetPrim", vehicle_stage_path),
+                        ("PublishJointState.inputs:targetPrim", [vehicle_stage_path + "/body"]),
                         ("PublishClock.inputs:topicName", vehicle_name + "/clock"),
                         # ("RTFPublisher.inputs:topicName", vehicle_name + "/realtime_factor"),
                     ],

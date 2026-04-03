@@ -66,6 +66,7 @@ class MonocularCamera(GraphicalSensor):
         # Setup an empty camera output dictionary
         self._state = {}
         self._camera_full_set = False
+        self._camera_initialized = False
 
         self.counter = 0
         self._original_intrinsics = self._intrinsics.copy()
@@ -143,19 +144,16 @@ class MonocularCamera(GraphicalSensor):
         # Set the camera intrinsics
         ((fx,_,cx),(_,fy,cy),(_,_,_)) = self._intrinsics
 
-        # Start the camera
-        self._camera.initialize()
-        # self._camera.set_focal_length(fx / 10.0)
+        # Guard: only call Camera.initialize() once to avoid creating duplicate render products
+        # (world.reset() triggers start→stop→start, which would otherwise create two SDGPipeline publishers)
+        if not self._camera_initialized:
+            self._camera.initialize()
 
-        # Set the correct properties of the camera (this must be done after the camera object is initialized)
-        #self._camera.set_projection_type("pinhole")
-        #self._camera.set_projection_type("fisheyePolynomial")  # # f-theta model, to approximate the fisheye model
-        #self._camera.set_rational_polynomial_properties(self._resolution[0], self._resolution[1], cx, cy, self._diagonal_fov, self._distortion_coefficients)
-        #self._camera.set_clipping_range(0.05, 100.0)
+            # Check if depth is enabled, if so, set the depth properties
+            if self._depth:
+                self._camera.add_distance_to_image_plane_to_frame()
 
-        # Check if depth is enabled, if so, set the depth properties
-        if self._depth:
-            self._camera.add_distance_to_image_plane_to_frame()
+            self._camera_initialized = True
 
         # Signal that the camera is fully set
         self._camera_full_set = True

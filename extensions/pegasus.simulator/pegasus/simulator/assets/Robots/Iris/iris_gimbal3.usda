@@ -1801,6 +1801,8 @@ def Xform "vehicle" (
             point3f physics:localPos1 = (0, 0, 0.01)
             quatf physics:localRot0 = (1, 0, 0, 0)
             quatf physics:localRot1 = (1, 0, 0, 0)
+            float drive:angular:physics:damping = 10.0
+            float drive:angular:physics:stiffness = 100.0
         }
     }
 
@@ -1837,6 +1839,8 @@ def Xform "vehicle" (
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (1, 0, 0, 0)
             quatf physics:localRot1 = (1, 0, 0, 0)
+            float drive:angular:physics:damping = 10.0
+            float drive:angular:physics:stiffness = 100.0
         }
     }
 
@@ -1873,6 +1877,8 @@ def Xform "vehicle" (
             point3f physics:localPos1 = (0, 0, 0)
             quatf physics:localRot0 = (1, 0, 0, 0)
             quatf physics:localRot1 = (1, 0, 0, 0)
+            float drive:angular:physics:damping = 10.0
+            float drive:angular:physics:stiffness = 100.0
         }
 
         # def Camera "camera_usd"

@@ -61,18 +61,22 @@ class PegasusApp:
         # Start the Pegasus Interface
         self.pg = PegasusInterface()
 
-        # Acquire the World, .i.e, the singleton that controls that is a one stop shop for setting up physics, 
+        # Acquire the World, .i.e, the singleton that controls that is a one stop shop for setting up physics,
         # spawning asset primitives, etc.
         self.pg._world = World(**self.pg._world_settings)
         self.world = self.pg.world
 
         # Launch one of the worlds provided by NVIDIA
         self.pg.load_environment(SIMULATION_ENVIRONMENTS["Plane with Light"])
-        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight"])
-        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight Flat"])
-        # self.pg.load_environment(SIMULATION_ENVIRONMENTS["Flight with Collision"])
-        # self.pg.load_asset(SIMULATION_ENVIRONMENTS["Flight Flat"],  "/World/layout")
-        self.world_offset_x, self.world_offset_y, self.world_offset_z = 0,0,0#25200
+
+        # Load the Flight aesthetic scene (Y-up USD, rotated to Z-up)
+        # self.load_flight_scene(
+        #     usd_path="/home/usrg/IsaacPX4/world/Flight/Flight_original.usd",
+        #     scale=0.001,
+        #     offset=(0.0, 0.0, 0.0),
+        # )
+
+        self.world_offset_x, self.world_offset_y, self.world_offset_z = 0,0,0
         # self.world_offset_x = 0.0
         # self.world_offset_y = 0.0
         # self.world_offset_z = 0.0
@@ -82,13 +86,13 @@ class PegasusApp:
         # self.world.reset()
         asyncio.ensure_future(self.create_simulation_time_graph())
         self.create_landmarks()
-        
+
         self.namespace = "px4_"
         self.vehicles = []
         # Spawn 5 vehicles with the PX4 control backend in the simulation, separated by 1.0 m along the x-axis
-        for i in range(3):
+        for i in range(5):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
-        
+
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
         self.world.reset()
@@ -125,6 +129,26 @@ class PegasusApp:
 
         # Auxiliar variable for the timeline callback example
         self.stop_sim = False
+
+    def load_flight_scene(self, usd_path: str, scale: float = 0.001, offset: tuple = (0.0, 0.0, 0.0)):
+        """Load the Flight aesthetic scene USD with Y-up → Z-up rotation.
+
+        Args:
+            usd_path: Absolute path to the Flight USD file.
+            scale: Uniform scale (USD is in cm with large coordinates; 0.001 fits the env).
+            offset: (x, y, z) translation offset in meters after scaling.
+        """
+        import omni.usd
+        from pxr import UsdGeom, Gf
+
+        stage = omni.usd.get_context().get_stage()
+        xform = UsdGeom.Xform.Define(stage, "/World/FlightScene")
+        # Order: translate → rotate → scale (USD applies ops top-to-bottom)
+        ox, oy, oz = offset
+        xform.AddTranslateOp().Set(Gf.Vec3d(ox, oy, oz))
+        xform.AddRotateXOp().Set(90.0)  # Y-up → Z-up
+        xform.AddScaleOp().Set(Gf.Vec3f(scale, scale, scale))
+        xform.GetPrim().GetReferences().AddReference(usd_path)
 
     def create_landmarks(self):
         from omni.isaac.core.objects import DynamicCuboid
@@ -170,7 +194,7 @@ class PegasusApp:
         # Create the vehicle
         # Try to spawn the selected robot in the world to the specified namespace
         config_multirotor = MultirotorConfig()
-        
+
         # Create the multirotor configuration
         mavlink_config = PX4MavlinkBackendConfig({
             "vehicle_id": vehicle_id,
@@ -180,9 +204,9 @@ class PegasusApp:
         })
         config_multirotor.backends = [
             PX4MavlinkBackend(mavlink_config),
-            ROS2Backend(vehicle_id=vehicle_id, 
+            ROS2Backend(vehicle_id=vehicle_id,
                         config={
-                            "namespace": self.namespace, 
+                            "namespace": self.namespace,
                             "pub_sensors": True,
                             "pub_graphical_sensors": True,
                             "pub_state": True,
@@ -193,9 +217,9 @@ class PegasusApp:
         config_multirotor.graphical_sensors = [
             MonocularCamera("/pitch_link/camera",
             config={
-                "update_rate": 60.0,
+                "frequency": 25,
                 "position": np.array([0, 0, 0]),
-                "orientation": np.array([0.0, 0.0, -90.0]),
+                "orientation": np.array([0.0, 0.0, 0.0]),
                 "intrinsics": np.array([[1078.8, 0.0, 1011.8], [0.0, 1078.7, 561.5], [0.0, 0.0, 1.0]])
                 # "intrinsics": np.array([[4581.0, 0.0, 1920/2], [0.0, 4581.0, 1200/2], [0.0, 0.0, 1.0]])
                 }
@@ -205,7 +229,7 @@ class PegasusApp:
         vehicle_name = self.namespace + str(vehicle_id)
         vehicle_stage_path = "/World/" + vehicle_name
         # vehicle_stage_path = "/World/quadrotor"
-        
+
 
         self.vehicles += [Multirotor(
             vehicle_stage_path,
@@ -217,7 +241,7 @@ class PegasusApp:
             config=config_multirotor)]
         asyncio.ensure_future(self.create_ros_action_graph(vehicle_stage_path, vehicle_name))
         # asyncio.ensure_future(self.create_ros_camera_graph(vehicle_stage_path, vehicle_name))
-        
+
     async def create_ros_camera_graph(self, vehicle_stage_path, vehicle_name):
         try:
             await omni.kit.app.get_app().next_update_async()
@@ -237,10 +261,10 @@ class PegasusApp:
                 {"graph_path": "/World/SimulationTimeGraph", "evaluator_name": "execution"},
                 {
                     og.Controller.Keys.CREATE_NODES: [
-                        ("Context", "omni.isaac.ros2_bridge.ROS2Context"),
+                        ("Context", "isaacsim.ros2.bridge.ROS2Context"),
                         ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                        ("ReadSimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
-                        ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
+                        ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                        ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
                     ],
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
@@ -266,12 +290,12 @@ class PegasusApp:
                 {
                     og.Controller.Keys.CREATE_NODES: [
                         ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                        ("ReadSimTime", "omni.isaac.core_nodes.IsaacReadSimulationTime"),
-                        ("Context", "omni.isaac.ros2_bridge.ROS2Context"),
-                        ("PublishJointState", "omni.isaac.ros2_bridge.ROS2PublishJointState"),
-                        ("SubscribeJointState", "omni.isaac.ros2_bridge.ROS2SubscribeJointState"),
-                        ("ArticulationController", "omni.isaac.core_nodes.IsaacArticulationController"),
-                        ("PublishClock", "omni.isaac.ros2_bridge.ROS2PublishClock"),
+                        ("ReadSimTime", "isaacsim.core.nodes.IsaacReadSimulationTime"),
+                        ("Context", "isaacsim.ros2.bridge.ROS2Context"),
+                        ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
+                        ("SubscribeJointState", "isaacsim.ros2.bridge.ROS2SubscribeJointState"),
+                        ("ArticulationController", "isaacsim.core.nodes.IsaacArticulationController"),
+                        ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
                     ],
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
@@ -296,10 +320,10 @@ class PegasusApp:
                     ],
                     og.Controller.Keys.SET_VALUES: [
                         # Setting the /Franka target prim to Articulation Controller node
-                        ("ArticulationController.inputs:robotPath", vehicle_stage_path),
+                        ("ArticulationController.inputs:robotPath", vehicle_stage_path + "/body"),
                         ("PublishJointState.inputs:topicName", vehicle_name + "/isaac_joint_states"),
                         ("SubscribeJointState.inputs:topicName", vehicle_name + "/isaac_joint_commands"),
-                        ("PublishJointState.inputs:targetPrim", vehicle_stage_path),
+                        ("PublishJointState.inputs:targetPrim", [vehicle_stage_path + "/body"]),
                         ("PublishClock.inputs:topicName", vehicle_name + "/clock"),
                         # ("RTFPublisher.inputs:topicName", vehicle_name + "/realtime_factor"),
                     ],
@@ -323,7 +347,7 @@ class PegasusApp:
 
             # Update the UI of the app and perform the physics step
             self.world.step(render=True)
-        
+
         # Cleanup and stop
         carb.log_warn("PegasusApp Simulation App is closing.")
         self.timeline.stop()
