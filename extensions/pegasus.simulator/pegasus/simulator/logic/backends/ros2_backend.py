@@ -503,11 +503,11 @@ class ROS2Backend(Backend):
         """
         # Reset the reference for the thrusters
         self.input_ref = [0.0 for i in range(self._num_rotors)]
-        # Create a subscription for the zoom control
+        # Create a subscription for the zoom level command
         if self._sub_zoom:
             self.zoom_sub = self.node.create_subscription(
                 Float64,
-                f"/{self._namespace + str(self._id)}/camera/zoom",
+                f"/{self._namespace + str(self._id)}/camera/zoom_level_cmd",
                 self.zoom_callback,
                 10
             )

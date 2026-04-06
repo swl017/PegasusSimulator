@@ -22,7 +22,7 @@ None (standalone, plugged into Vehicle via config).
 
 ## ROS2Backend: Zoom Control
 - Config flag: `"sub_zoom": True` (default True)
-- Subscribes to `/{namespace}{id}/camera/zoom` (`std_msgs/Float64`) in `start()` — not in `initialize_subscribers()`, because `self._vehicle` is only available after the backend is attached to the vehicle.
+- Subscribes to `/{namespace}{id}/camera/zoom_level_cmd` (`std_msgs/Float64`) in `start()` — not in `initialize_subscribers()`, because `self._vehicle` is only available after the backend is attached to the vehicle.
 - `zoom_callback()` iterates `self._vehicle._graphical_sensors`, calls `MonocularCamera.set_zoom(zoom)` on each camera.
 - Zoom value: 1.0 = no zoom (minimum), 2.0 = 2x, etc.
 

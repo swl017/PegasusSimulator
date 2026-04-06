@@ -22,7 +22,7 @@ Camera and LiDAR sensors that use Isaac Sim's rendering pipeline for image-based
 ## MonocularCamera: Zoom
 - `set_zoom(zoom: float)`: Scales intrinsic focal lengths (fx, fy) by the zoom factor while preserving the principal point (cx, cy). Recomputes and applies focal length, aperture, and clipping to the Isaac Sim camera.
 - Minimum zoom is 1.0 (clamped). Original intrinsics stored in `_original_intrinsics`.
-- Called by `ROS2Backend.zoom_callback()` via the `/{namespace}{id}/camera/zoom` ROS2 topic.
+- Called by `ROS2Backend.zoom_callback()` via the `/{namespace}{id}/camera/zoom_level_cmd` ROS2 topic.
 
 ## Calling Contract
 - `GraphicalSensor.initialize(vehicle)`: Called once after vehicle spawn.
