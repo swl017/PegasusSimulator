@@ -12,6 +12,7 @@ enable_extension("isaacsim.ros2.bridge")
 
 # ROS2 imports
 import rclpy
+from rclpy.parameter import Parameter
 from std_msgs.msg import Float64
 from geometry_msgs.msg import TransformStamped
 from sensor_msgs.msg import Imu, MagneticField, NavSatFix, NavSatStatus
@@ -95,7 +96,12 @@ class ROS2Backend(Backend):
             # If rclpy is already initialized, just ignore the exception
             pass
 
-        self.node = rclpy.create_node("simulator_vehicle_" + str(vehicle_id))
+        # use_sim_time=True so every get_clock().now() follows /clock; state/pose
+        # and state/twist stamps are usable as ground-truth sim-time IMU input.
+        self.node = rclpy.create_node(
+            "simulator_vehicle_" + str(vehicle_id),
+            parameter_overrides=[Parameter("use_sim_time", Parameter.Type.BOOL, True)],
+        )
 
         # Initialize the publishers and subscribers
         self.initialize_publishers(config)

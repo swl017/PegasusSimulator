@@ -289,18 +289,14 @@ class PegasusApp:
                         ("PublishJointState", "isaacsim.ros2.bridge.ROS2PublishJointState"),
                         ("SubscribeJointState", "isaacsim.ros2.bridge.ROS2SubscribeJointState"),
                         ("ArticulationController", "isaacsim.core.nodes.IsaacArticulationController"),
-                        ("PublishClock", "isaacsim.ros2.bridge.ROS2PublishClock"),
                     ],
                     og.Controller.Keys.CONNECT: [
                         ("OnPlaybackTick.outputs:tick", "PublishJointState.inputs:execIn"),
                         ("OnPlaybackTick.outputs:tick", "SubscribeJointState.inputs:execIn"),
-                        ("OnPlaybackTick.outputs:tick", "PublishClock.inputs:execIn"),
                         ("OnPlaybackTick.outputs:tick", "ArticulationController.inputs:execIn"),
                         ("Context.outputs:context", "PublishJointState.inputs:context"),
                         ("Context.outputs:context", "SubscribeJointState.inputs:context"),
-                        ("Context.outputs:context", "PublishClock.inputs:context"),
                         ("ReadSimTime.outputs:simulationTime", "PublishJointState.inputs:timeStamp"),
-                        ("ReadSimTime.outputs:simulationTime", "PublishClock.inputs:timeStamp"),
                         ("SubscribeJointState.outputs:jointNames", "ArticulationController.inputs:jointNames"),
                         (
                             "SubscribeJointState.outputs:positionCommand",
@@ -318,8 +314,6 @@ class PegasusApp:
                         ("PublishJointState.inputs:topicName", vehicle_name + "/isaac_joint_states"),
                         ("SubscribeJointState.inputs:topicName", vehicle_name + "/isaac_joint_commands"),
                         ("PublishJointState.inputs:targetPrim", [vehicle_stage_path + "/body"]),
-                        ("PublishClock.inputs:topicName", vehicle_name + "/clock"),
-                        # ("RTFPublisher.inputs:topicName", vehicle_name + "/realtime_factor"),
                     ],
                 },
             )
