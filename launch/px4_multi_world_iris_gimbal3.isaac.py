@@ -87,19 +87,42 @@ class PegasusApp:
         asyncio.ensure_future(self.create_simulation_time_graph())
         self.create_landmarks()
 
-        # Camera intrinsics — must match IsaacLab iris_ma6 training env:
-        #   focal_length=24mm, horizontal_aperture=20.955mm, 640x480
-        self._cam_width, self._cam_height = 640, 480
-        self._cam_matrix = [[732.6, 0, 320],
-                            [0, 732.6, 240],
-                            [0, 0, 1]]
+        # Camera resolution preset (mirrors /home/usrg/mas/src/tmux/drone.tmuxp.yaml
+        # and simdrone*.tmuxp.yaml). Override per-launch with `CAMERA_RES=low|mid|high`.
+        # Lens is the same across presets — smaller resolutions are sensor crops of
+        # the 1920×1080 reference: fx,fy held constant from calibration; cx,cy = w/2, h/2.
+        #   low  →  640× 360,  YOLO engine dronecop9-2-384x640
+        #   mid  →  960× 540,  YOLO engine dronecop9-2-544x960
+        #   high → 1920×1080,  YOLO engine dronecop9-2-1088x1920
+        _camera_res = os.environ.get("CAMERA_RES", "high")
+        if _camera_res == "low":
+            self._cam_width, self._cam_height = 640, 360
+        elif _camera_res == "mid":
+            self._cam_width, self._cam_height = 960, 540
+        elif _camera_res == "high":
+            self._cam_width, self._cam_height = 1920, 1080
+        else:
+            raise ValueError(f"unknown CAMERA_RES={_camera_res} (use low|mid|high)")
 
-        # Derived USD camera parameters
-        pixel_size = 20.955 / 640  # mm per pixel (= horizontal_aperture / width)
-        ((fx,_,cx),(_,fy,cy),(_,_,_)) = self._cam_matrix
-        self._cam_focal_length = (fx + fy) / 2 * pixel_size    # 24.0 mm
-        self._cam_h_aperture = pixel_size * self._cam_width     # 20.955 mm
-        self._cam_v_aperture = pixel_size * self._cam_height    # 15.716 mm
+        # Intrinsics from 2026-04-17/1x calibration (SIYI A8 mini, 1x zoom, 1920×1080):
+        #   /home/usrg/mas/datasets/camera_calibration/2026-04-17/1x/intrinsics_summary.json
+        # Same-lens assumption → fx, fy constant across resolution presets; cx, cy snap
+        # to image center.
+        _fx_cal = 1053.044591
+        _fy_cal = 1052.905959
+        self._cam_matrix = [[_fx_cal, 0, self._cam_width / 2],
+                            [0, _fy_cal, self._cam_height / 2],
+                            [0, 0, 1]]
+        print(f"[PegasusApp] CAMERA_RES={_camera_res}  {self._cam_width}x{self._cam_height}  "
+              f"fx={_fx_cal:.2f} fy={_fy_cal:.2f} cx={self._cam_width/2:.1f} cy={self._cam_height/2:.1f}")
+
+        # Derived USD camera parameters — same lens → focal_length constant; aperture
+        # scales with resolution so rendered fx_px = focal*width/h_aperture = _fx_cal.
+        # Value matches iris_ma6 training env (iris_ma_env6_test_cfg.py): focal_length=11.493,
+        # horizontal_aperture=20.955 at 1920×1080 → fx_px = 11.493*1920/20.955 = 1053.04.
+        self._cam_focal_length = 11.493  # mm (matches iris_ma6 training PinholeCameraCfg)
+        self._cam_h_aperture = self._cam_focal_length * self._cam_width / _fx_cal
+        self._cam_v_aperture = self._cam_focal_length * self._cam_height / _fy_cal
 
         self.namespace = "px4_"
         self.vehicles = []
@@ -110,8 +133,9 @@ class PegasusApp:
         self.world.reset()
 
         # Apply camera prim properties after world.reset() (render products exist now)
+        # focus_distance and clipping_range match iris_ma6 training env (iris_ma_env6_test_cfg.py).
         f_stop = 1.8
-        focus_distance = 50  # meters
+        focus_distance = 400.0  # matches training PinholeCameraCfg.focus_distance
         for vehicle in self.vehicles:
             for sensor in vehicle._graphical_sensors:
                 sensor._camera.set_focal_length(self._cam_focal_length / 10.0)     # mm → cm
@@ -119,7 +143,7 @@ class PegasusApp:
                 sensor._camera.set_lens_aperture(f_stop * 100.0)
                 sensor._camera.set_horizontal_aperture(self._cam_h_aperture / 10.0) # mm → cm
                 sensor._camera.set_vertical_aperture(self._cam_v_aperture / 10.0)
-                sensor._camera.set_clipping_range(0.05, 1.0e5)
+                sensor._camera.set_clipping_range(0.1, 1.0e5)
 
         # Auxiliar variable for the timeline callback example
         self.stop_sim = False
