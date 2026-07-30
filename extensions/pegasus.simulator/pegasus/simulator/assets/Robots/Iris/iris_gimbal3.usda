@@ -1813,7 +1813,10 @@ def Xform "vehicle" (
         bool physics:kinematicEnabled = 0
         quatd xformOp:orient = (1, 0, 0, 0)
         double3 xformOp:scale = (1, 1, 1)
-        double3 xformOp:translate = (0.0, -0.6, 0.12)
+        double3 xformOp:translate = (0.0, -0.06, 0.12)
+        # RAL ticket 044 (2026-07-30): was (0.0, -0.6, 0.12). A 0.6 m roll-link arm is
+        # physically impossible on an Iris (~0.5 m across) and is a decimal slip made when
+        # this gimbal was moved from the X-axis convention below to the Y-axis one.
         # double3 xformOp:translate = (0.06, 0, 0.12)
         point3f physics:centerOfMass = (0, 0, 0)
         float3 physics:diagonalInertia = (0.000001, 0.000001, 0.000001)
