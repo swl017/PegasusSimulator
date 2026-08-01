@@ -126,7 +126,32 @@ class PegasusApp:
 
         self.namespace = "px4_"
         self.vehicles = []
-        for i in range(3):
+        # RAL ticket 021 coop_2obs: NUM_VEHICLES=4 adds px4_4 (second flown observer,
+        # same camera+gimbal factory). Default 3 keeps every existing session unchanged.
+        num_vehicles = int(os.environ.get("NUM_VEHICLES", "3"))
+        print(f"[PegasusApp] NUM_VEHICLES={num_vehicles}")
+
+        # RAL ticket 019 revisit2 W0f — CAMERA_VEHICLES: which vehicle ids get a camera.
+        # The wall clock of a sweep is set by Isaac RENDERING camera sensors, not by ROS-side
+        # fusion CPU, and this factory attaches a 1920x1080 @ 25 Hz MonocularCamera with
+        # pub_graphical_sensors:True to EVERY vehicle — including ones whose session starts
+        # no camera/YOLO window. In the coop_1obs layout px4_3 (the TARGET) is rendered and
+        # published for NO consumer (nothing in `mas` subscribes /px4_3/camera/color/*), so
+        # excluding it drops the rendered camera count 3 -> 2, a third off the dominant cost.
+        # Default = ALL ids, so every pre-existing session is byte-for-byte unchanged.
+        #   CAMERA_VEHICLES="1,2"   -> only px4_1 and px4_2 carry cameras
+        # Deliver it via the tmuxp `environment:` block or `tmux setenv -g` and read back with
+        # `tmux show-environment -g`: `VAR=... tmuxp load` is silently dropped whenever a tmux
+        # server exists, and on this box an idle `keepalive` session keeps one alive always.
+        _cam_env = os.environ.get("CAMERA_VEHICLES", "").strip()
+        if _cam_env:
+            self._camera_ids = {int(x) for x in _cam_env.split(",") if x.strip()}
+        else:
+            self._camera_ids = set(range(1, num_vehicles + 1))
+        print(f"[PegasusApp] CAMERA_VEHICLES={sorted(self._camera_ids)} "
+              f"({len(self._camera_ids)} of {num_vehicles} vehicles rendered)")
+
+        for i in range(num_vehicles):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
@@ -212,6 +237,8 @@ class PegasusApp:
         # Create the vehicle
         # Try to spawn the selected robot in the world to the specified namespace
         config_multirotor = MultirotorConfig()
+        # RAL ticket 019 revisit2 W0f: does this vehicle carry a camera at all?
+        _has_camera = vehicle_id in self._camera_ids
 
         # Create the multirotor configuration
         mavlink_config = PX4MavlinkBackendConfig({
@@ -226,23 +253,31 @@ class PegasusApp:
                         config={
                             "namespace": self.namespace,
                             "pub_sensors": True,
-                            "pub_graphical_sensors": True,
+                            "pub_graphical_sensors": _has_camera,
                             "pub_state": True,
                             "sub_control": False,
                             "sub_zoom": True,
                         })]
 
-        config_multirotor.graphical_sensors = [
-            MonocularCamera("/pitch_link/camera",
-            config={
-                "frequency": 25,
-                "resolution": (self._cam_width, self._cam_height),
-                "position": np.array([0, 0, 0]),
-                "orientation": np.array([0.0, 0.0, 0.0]),
-                "intrinsics": np.array(self._cam_matrix),
-                }
-            )
-        ]
+        # RAL ticket 019 revisit2 W0f: skip the render product entirely for vehicles that have
+        # no camera consumer (see CAMERA_VEHICLES above). An empty graphical_sensors list is
+        # safe by construction — the post-world.reset() property loop iterates
+        # `vehicle._graphical_sensors` and simply does nothing — and the USD prim is untouched.
+        if _has_camera:
+            config_multirotor.graphical_sensors = [
+                MonocularCamera("/pitch_link/camera",
+                config={
+                    "frequency": 25,
+                    "resolution": (self._cam_width, self._cam_height),
+                    "position": np.array([0, 0, 0]),
+                    "orientation": np.array([0.0, 0.0, 0.0]),
+                    "intrinsics": np.array(self._cam_matrix),
+                    }
+                )
+            ]
+        else:
+            config_multirotor.graphical_sensors = []
+            print(f"[PegasusApp] vehicle {vehicle_id}: camera SKIPPED (not in CAMERA_VEHICLES)")
 
         vehicle_name = self.namespace + str(vehicle_id)
         vehicle_stage_path = "/World/" + vehicle_name
