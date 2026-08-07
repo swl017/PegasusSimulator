@@ -95,6 +95,7 @@ class PegasusApp:
         #   mid  →  960× 540,  YOLO engine dronecop9-2-544x960
         #   high → 1920×1080,  YOLO engine dronecop9-2-1088x1920
         _camera_res = os.environ.get("CAMERA_RES", "high")
+        self._camera_res = _camera_res   # kept for the boot label (see write_boot_label)
         if _camera_res == "low":
             self._cam_width, self._cam_height = 640, 360
         elif _camera_res == "mid":
@@ -173,15 +174,47 @@ class PegasusApp:
         # Uncensored CPA and physical contact are the same property; this filter keeps the
         # metric and drops the contact.
         #
-        # Default OFF, so every pre-existing session is byte-for-byte unchanged. Deliver it
-        # via the tmuxp `environment:` block or `tmux setenv -g` and read back with
-        # `tmux show-environment -g`: `VAR=... tmuxp load` is silently dropped whenever a
-        # tmux server exists (same trap as CAMERA_VEHICLES above).
-        #   DISABLE_VEHICLE_COLLISION=1   -> px4_* do not collide with px4_*
-        if os.environ.get("DISABLE_VEHICLE_COLLISION", "0").strip() == "1":
-            self.disable_vehicle_vehicle_collision(num_vehicles)
+        # DEFAULT ON as of 2026-08-08 (user decision: the remaining cohort runs filtered,
+        # and an opt-IN is something an operator can forget). Until then the default was
+        # OFF and the filter was delivered per-boot via `tmux setenv -g`; no tmuxp file
+        # ever set it, so a forgotten setenv silently bought back the E56 failure mode.
+        #   DISABLE_VEHICLE_COLLISION unset or =1  -> px4_* do not collide with px4_* (default)
+        #   DISABLE_VEHICLE_COLLISION=0            -> EXPLICIT OPT-OUT, collision-enabled physics
+        # Any other value raises rather than picking a regime silently (as CAMERA_RES does).
+        #
+        # COMPARABILITY. This flips the physics default, so this launcher is no longer
+        # byte-for-byte equivalent to pre-2026-08-08 boots. Every cohort acquired before
+        # this commit — RAL 055 E56/E57 and everything earlier — flew collision-ENABLED;
+        # E58/E59 flew filtered. Reproducing an older cohort means setting
+        # DISABLE_VEHICLE_COLLISION=0 explicitly. See RAL 055 CONSUMER_MANIFEST.md §5.
+        #
+        # Whichever way it is set, deliver it via the tmuxp `environment:` block or
+        # `tmux setenv -g` and read back with `tmux show-environment -g`: `VAR=... tmuxp
+        # load` is silently dropped whenever a tmux server exists (same trap as
+        # CAMERA_VEHICLES above). That trap is why the opt-out must not be the quiet path.
+        # Empty counts as unset (as CAMERA_VEHICLES treats it): the tmuxp files pass this
+        # inline as `DISABLE_VEHICLE_COLLISION=${DISABLE_VEHICLE_COLLISION}`, which expands
+        # to empty if the `environment:` block ever fails to reach the pane. Falling to the
+        # safe default beats aborting the boot, and write_boot_label records the raw value
+        # either way, so an empty expansion can never mis-label a cohort.
+        _nocollide_raw = os.environ.get("DISABLE_VEHICLE_COLLISION", "").strip()
+        _nocollide_env = _nocollide_raw or "1"
+        if _nocollide_env not in ("0", "1"):
+            raise ValueError(
+                "unknown DISABLE_VEHICLE_COLLISION=%r (use 0|1; unset or empty means 1, the "
+                "default since 2026-08-08) — refusing to guess a collision regime"
+                % _nocollide_raw)
+        if _nocollide_env == "1":
+            _collision_group = self.disable_vehicle_vehicle_collision(num_vehicles)
         else:
-            print("[PegasusApp] DISABLE_VEHICLE_COLLISION=0 (vehicle-vehicle collision ON, default)")
+            _collision_group = None
+            print("[PegasusApp] *** DISABLE_VEHICLE_COLLISION=0 — EXPLICIT OPT-OUT: "
+                  "vehicle-vehicle collision is ON (pre-2026-08-08 physics). An interceptor "
+                  "reaching a sub-0.5 m CPA can down a vehicle and invalidate the rest of "
+                  "the cohort — see RAL ticket 055 E56. ***")
+
+        # The machine-readable half of the boot witness (RAL ticket 055 §4 follow-up).
+        self.write_boot_label(num_vehicles, _nocollide_raw, _collision_group)
 
         # Reset the simulation environment so that all articulations (aka robots) are initialized
         self.world.reset()
@@ -215,6 +248,9 @@ class PegasusApp:
         no filter at all, because the cohort would look protected, run for 40 minutes and
         then lose a vehicle anyway — which is the failure this exists to prevent. So the
         prims are checked before authoring and the authored targets are read back after.
+
+        Returns the READBACK-VERIFIED group description (path, filteredGroups, members) so
+        the boot label reports what was authored rather than what was requested.
         """
         import omni.usd
         from pxr import Usd, UsdPhysics
@@ -256,6 +292,87 @@ class PegasusApp:
         print("[PegasusApp] DISABLE_VEHICLE_COLLISION=1 -> self-filtering CollisionGroup "
               "%s over %d vehicles %s (vehicle-GROUND collision UNCHANGED) [RAL ticket 055]"
               % (group_path, len(members), members))
+
+        return {"path": group_path,
+                "filtered_groups": authored_filter,
+                "members": authored_members,
+                "ground_collision": "unchanged"}
+
+    def write_boot_label(self, num_vehicles: int, nocollide_raw: str, collision_group):
+        """Write the Isaac-side boot label — the machine-readable half of the boot witness.
+
+        WHY. RAL ticket 055 `s21_deviation_deploy_assertion.md` §4: the collision regime,
+        the single variable separating cohorts E58/E59 from E57/E56, is absent from the
+        conductor's provenance entirely — "a reader of the provenance JSONs alone cannot
+        distinguish E58 from E57" — because `experiment_conductor` has no visibility into
+        THIS process's environment. Only Isaac knows the Isaac-side configuration, so
+        Isaac writes it down. That ticket's filed follow-up is the conductor archiving
+        this file into `boot_<id>_provenance.json`.
+
+        It labels what was AUTHORED, not what was requested: `collision_group` is the
+        readback-verified description returned by disable_vehicle_vehicle_collision(), so
+        a filter that failed to apply cannot produce a label claiming it did.
+
+        STALENESS is the hazard a well-known path invites — a consumer that reads a label
+        left behind by a previous session would silently mis-label a whole cohort, which
+        is the exact failure class this file exists to close. So the label carries this
+        process's `pid` and `boot_unix_time`, and a consumer MUST check that `/proc/<pid>`
+        is alive before trusting it (the conductor runs on this same box). The file is
+        written atomically, so a reader never sees a half-written label.
+
+        Fail-closed, like the filter above: if the label cannot be written the boot stops.
+        A cohort that cannot state its own physics is the thing being prevented.
+        """
+        import hashlib
+        import json
+        import socket
+        import time
+
+        producer = os.path.abspath(__file__)
+        try:
+            with open(producer, "rb") as f:
+                producer_sha256 = hashlib.sha256(f.read()).hexdigest()
+        except OSError:
+            producer_sha256 = None
+
+        label = {
+            "schema": "isaac_boot_label/1",
+            # Liveness — a consumer must verify /proc/<pid> before trusting this file.
+            "pid": os.getpid(),
+            "boot_unix_time": time.time(),
+            "hostname": socket.gethostname(),
+            "producer": producer,
+            "producer_sha256": producer_sha256,
+            "headless": bool(args.headless),
+            # The Isaac-side configuration surface that is invisible downstream.
+            "num_vehicles": num_vehicles,
+            "namespace": self.namespace,
+            "camera_res": self._camera_res,
+            "camera_width": self._cam_width,
+            "camera_height": self._cam_height,
+            "camera_vehicles": sorted(self._camera_ids),
+            "disable_vehicle_collision": collision_group is not None,
+            # The raw env string as delivered ("" = unset, i.e. the default). The boolean
+            # above is derived from the AUTHORED group and is the authoritative field.
+            "disable_vehicle_collision_env": nocollide_raw,
+            "collision_group": collision_group,
+        }
+
+        path = os.environ.get("ISAAC_BOOT_LABEL", "/tmp/isaac_boot_label.json").strip()
+        tmp = path + ".%d.tmp" % os.getpid()
+        try:
+            with open(tmp, "w") as f:
+                json.dump(label, f, indent=2, sort_keys=True)
+                f.write("\n")
+            os.replace(tmp, path)          # atomic: no reader sees a partial label
+        except OSError as e:
+            raise RuntimeError(
+                "ISAAC_BOOT_LABEL: could not write the boot label to %s (%s) — refusing to "
+                "boot a cohort that cannot state its own Isaac-side configuration "
+                "[RAL ticket 055]" % (path, e))
+
+        print("[PegasusApp] ISAAC_BOOT_LABEL -> %s (pid=%d, disable_vehicle_collision=%s) "
+              "[RAL ticket 055]" % (path, label["pid"], label["disable_vehicle_collision"]))
 
     def load_flight_scene(self, usd_path: str, scale: float = 0.001, offset: tuple = (0.0, 0.0, 0.0)):
         """Load the Flight aesthetic scene USD with Y-up → Z-up rotation.
