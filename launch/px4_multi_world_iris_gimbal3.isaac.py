@@ -154,6 +154,35 @@ class PegasusApp:
         for i in range(num_vehicles):
             self.vehicle_factory(i+1, gap_x_axis=1.0)
 
+        # RAL ticket 055 S21 — DISABLE_VEHICLE_COLLISION: stop vehicles colliding with
+        # EACH OTHER (ground collision is untouched).
+        #
+        # WHY. The engagement harness runs every trial to TRUE closest-point-of-approach
+        # and deliberately "never terminates on a radius crossing", so min_range is an
+        # uncensored CPA that stays scorable at any kill radius
+        # (mas experiment_conductor.py:430). An interceptor accurate enough to reach a
+        # sub-0.2 m CPA therefore flies INTO the target airframe (~0.5 m across). On the
+        # RAL 055 E56 DGL cohort that is exactly what happened: trial A-0 hit a 0.104 m
+        # CPA, the collision cost the target PX4 its attitude/accel-bias estimate
+        # ("Failsafe activated" -> "mc_pos_control: Failsafe: blind land"), and it came to
+        # rest INVERTED (roll 178.7 deg) on the ground. Nothing recovers that from inside a
+        # running stack: preflight then rejects arming (High Accelerometer Bias, Attitude
+        # failure), and the conductor's _reposition FLIES vehicles to the IC rather than
+        # teleporting, so a downed vehicle can never settle. Every later trial then
+        # measured range-to-corpse (121.88 m) and both boots aborted 1-valid-of-16.
+        # Uncensored CPA and physical contact are the same property; this filter keeps the
+        # metric and drops the contact.
+        #
+        # Default OFF, so every pre-existing session is byte-for-byte unchanged. Deliver it
+        # via the tmuxp `environment:` block or `tmux setenv -g` and read back with
+        # `tmux show-environment -g`: `VAR=... tmuxp load` is silently dropped whenever a
+        # tmux server exists (same trap as CAMERA_VEHICLES above).
+        #   DISABLE_VEHICLE_COLLISION=1   -> px4_* do not collide with px4_*
+        if os.environ.get("DISABLE_VEHICLE_COLLISION", "0").strip() == "1":
+            self.disable_vehicle_vehicle_collision(num_vehicles)
+        else:
+            print("[PegasusApp] DISABLE_VEHICLE_COLLISION=0 (vehicle-vehicle collision ON, default)")
+
         # Reset the simulation environment so that all articulations (aka robots) are initialized
         self.world.reset()
 
@@ -172,6 +201,61 @@ class PegasusApp:
 
         # Auxiliar variable for the timeline callback example
         self.stop_sim = False
+
+    def disable_vehicle_vehicle_collision(self, num_vehicles: int):
+        """Author a SELF-FILTERING UsdPhysics.CollisionGroup over the vehicle prims.
+
+        A collision group that lists ITSELF in `filteredGroups` means its members do not
+        collide with one another, while collisions with everything OUTSIDE the group —
+        notably the ground plane — are untouched. That is exactly the semantics RAL
+        ticket 055 S21 needs: an interceptor may fly through the target to its true CPA,
+        but a vehicle that falls still lands.
+
+        Fail-closed by construction. A filter that silently fails to author is worse than
+        no filter at all, because the cohort would look protected, run for 40 minutes and
+        then lose a vehicle anyway — which is the failure this exists to prevent. So the
+        prims are checked before authoring and the authored targets are read back after.
+        """
+        import omni.usd
+        from pxr import Usd, UsdPhysics
+
+        stage = omni.usd.get_context().get_stage()
+        group_path = "/World/CollisionGroups/vehicles"
+        group = UsdPhysics.CollisionGroup.Define(stage, group_path)
+
+        # Self-filtering: members of this group ignore each other.
+        filtered = group.CreateFilteredGroupsRel()
+        filtered.AddTarget(group_path)
+
+        # Membership. Newer USD exposes the collection through the schema; fall back to
+        # the raw Usd.CollectionAPI instance name ("colliders") on older builds.
+        try:
+            includes = group.GetCollidersCollectionAPI().CreateIncludesRel()
+        except Exception:
+            includes = Usd.CollectionAPI.Apply(
+                group.GetPrim(), "colliders").CreateIncludesRel()
+
+        members = []
+        for i in range(1, num_vehicles + 1):
+            prim_path = "/World/" + self.namespace + str(i)
+            if not stage.GetPrimAtPath(prim_path).IsValid():
+                raise RuntimeError(
+                    "DISABLE_VEHICLE_COLLISION: vehicle prim %s is missing — refusing to "
+                    "boot with a filter that would silently not apply" % prim_path)
+            includes.AddTarget(prim_path)
+            members.append(prim_path)
+
+        authored_filter = [t.pathString for t in filtered.GetTargets()]
+        authored_members = [t.pathString for t in includes.GetTargets()]
+        if group_path not in authored_filter or sorted(authored_members) != sorted(members):
+            raise RuntimeError(
+                "DISABLE_VEHICLE_COLLISION: readback mismatch — filteredGroups=%s "
+                "includes=%s (expected self-filter on %s over %s)"
+                % (authored_filter, authored_members, group_path, members))
+
+        print("[PegasusApp] DISABLE_VEHICLE_COLLISION=1 -> self-filtering CollisionGroup "
+              "%s over %d vehicles %s (vehicle-GROUND collision UNCHANGED) [RAL ticket 055]"
+              % (group_path, len(members), members))
 
     def load_flight_scene(self, usd_path: str, scale: float = 0.001, offset: tuple = (0.0, 0.0, 0.0)):
         """Load the Flight aesthetic scene USD with Y-up → Z-up rotation.
